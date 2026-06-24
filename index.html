@@ -1075,9 +1075,9 @@ async function submitRecording() {
       reader.readAsDataURL(state.blob);
     });
 
-    setProgress(30, 'Sending to Drive…');
+    setProgress(35, 'Sending to Drive…');
 
-    const payload = {
+    const payload = JSON.stringify({
       filename,
       mobile:       state.mobile,
       lang:         state.lang,
@@ -1086,25 +1086,16 @@ async function submitRecording() {
       sentenceText: getCurrent(),
       duration:     state.timerSec,
       audio:        b64,
-    };
-
-    // ── Apps Script requires no-cors because it redirects on POST.
-    //    We treat any non-thrown fetch as success (redirect = script ran).
-    //    The script itself handles Drive save + Sheet append.
-    setProgress(60, 'Saving to Drive…');
-
-    const controller = new AbortController();
-    const timeout    = setTimeout(() => controller.abort(), 30000); // 30s timeout
-
-    await fetch(CONFIG.UPLOAD_URL, {
-      method:  'POST',
-      mode:    'no-cors',          // required for Apps Script
-      body:    JSON.stringify(payload),
-      signal:  controller.signal,
     });
-    clearTimeout(timeout);
 
-    // If fetch didn't throw, the request reached Apps Script successfully
+    setProgress(55, 'Saving to Drive…');
+
+    // ── Use hidden iframe + form POST ─────────────────────────────────
+    // fetch() with no-cors fails silently for Workspace domain URLs
+    // (alsidian.com) because Google intercepts with auth redirect.
+    // A form POST via hidden iframe bypasses this completely.
+    await postViaIframe(CONFIG.UPLOAD_URL, payload);
+
     setProgress(100, 'Saved to Drive ✓');
     state.takes[state.idx]     = getTake() + 1;
     state.submitted[state.idx] = true;
@@ -1121,15 +1112,69 @@ async function submitRecording() {
     }, 1000);
 
   } catch (err) {
-    let msg = 'Upload failed';
-    if (err.name === 'AbortError') msg = 'Timed out — check your connection';
-    setProgress(0, msg);
-    addLog(filename, state.timerSec, 'ERR');
-    showToast('❌ ' + msg + ' — tap Submit to retry', 'error');
+    setProgress(0, 'Upload failed — tap Submit to retry');
+    addLog(getFileName(), state.timerSec, 'ERR');
+    showToast('❌ Upload failed — tap Submit to retry', 'error');
     btn.disabled  = false;
     btn.innerHTML = '<span>⬆</span> Submit & Move to Next';
     setTimeout(() => { wrap.style.display = 'none'; }, 3000);
   }
+}
+
+// ── postViaIframe ─────────────────────────────────────────────────────
+// Creates a hidden iframe + form, submits the payload as a POST,
+// waits for the iframe to load (= Apps Script responded), then cleans up.
+// This works with Google Workspace domain URLs that block fetch/XHR.
+function postViaIframe(url, jsonPayload) {
+  return new Promise((resolve, reject) => {
+    // Create hidden iframe
+    const iframe = document.createElement('iframe');
+    iframe.name  = 'alsidian_upload_' + Date.now();
+    iframe.style.cssText = 'display:none;position:absolute;width:0;height:0;border:none';
+    document.body.appendChild(iframe);
+
+    // Create form targeting the iframe
+    const form    = document.createElement('form');
+    form.method   = 'POST';
+    form.action   = url;
+    form.target   = iframe.name;
+    form.style.display = 'none';
+
+    // Add payload as hidden field
+    const input   = document.createElement('input');
+    input.type    = 'hidden';
+    input.name    = 'payload';
+    input.value   = jsonPayload;
+    form.appendChild(input);
+
+    document.body.appendChild(form);
+
+    // Timeout — 45 seconds for large audio files
+    const timer = setTimeout(() => {
+      cleanup();
+      reject(new Error('Upload timed out after 45 seconds'));
+    }, 45000);
+
+    // Success when iframe loads (Apps Script responded)
+    iframe.onload = () => {
+      clearTimeout(timer);
+      cleanup();
+      resolve();
+    };
+
+    iframe.onerror = () => {
+      clearTimeout(timer);
+      cleanup();
+      reject(new Error('iframe error'));
+    };
+
+    function cleanup() {
+      try { document.body.removeChild(form);   } catch(e) {}
+      try { document.body.removeChild(iframe); } catch(e) {}
+    }
+
+    form.submit();
+  });
 }
 
 function setProgress(pct,label) {
