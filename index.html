@@ -6,390 +6,159 @@
 <title>Alsidian — Voice Recorder</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
-  :root {
-    --navy:    #0F2744;
-    --blue:    #1A5CB8;
-    --sky:     #3B8FE8;
-    --ice:     #EBF4FF;
-    --mint:    #00C48C;
-    --amber:   #F5A623;
-    --red:     #E84040;
-    --white:   #FFFFFF;
-    --smoke:   #F7F9FC;
-    --silver:  #C8D6E8;
-    --slate:   #6B839A;
-    --ink:     #1A2B3C;
-  }
-
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  html, body {
-    min-height: 100vh;
-    background: var(--smoke);
-    font-family: 'Inter', system-ui, sans-serif;
-    color: var(--ink);
-    -webkit-font-smoothing: antialiased;
-  }
-
-  /* ── HEADER ── */
-  .header {
-    background: var(--navy);
-    padding: 16px 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    box-shadow: 0 2px 12px rgba(15,39,68,.35);
-  }
-  .logo { display: flex; align-items: center; gap: 10px; }
-  .logo-mark {
-    width: 32px; height: 32px; border-radius: 8px;
-    background: linear-gradient(135deg, var(--sky), var(--mint));
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 14px; color: #fff; letter-spacing: -.5px;
-  }
-  .logo-text { font-weight: 700; font-size: 18px; color: #fff; letter-spacing: .5px; }
-  .progress-pill {
-    background: rgba(255,255,255,.12);
-    border: 1px solid rgba(255,255,255,.2);
-    border-radius: 20px;
-    padding: 4px 12px;
-    font-size: 12px; font-weight: 600; color: rgba(255,255,255,.85);
-    font-family: 'JetBrains Mono', monospace;
-  }
-
-  /* ── MAIN ── */
-  .main { max-width: 540px; margin: 0 auto; padding: 20px 16px 60px; }
-
-  /* ── CARD ── */
-  .card {
-    background: var(--white);
-    border-radius: 16px;
-    padding: 20px;
-    margin-bottom: 14px;
-    box-shadow: 0 1px 4px rgba(15,39,68,.07), 0 4px 16px rgba(15,39,68,.05);
-    border: 1px solid rgba(15,39,68,.07);
-  }
-  .card-label {
-    font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
-    text-transform: uppercase; color: var(--slate);
-    margin-bottom: 12px; display: block;
-  }
-
-  /* ── SETUP CARD ── */
-  .setup-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .field-wrap { display: flex; flex-direction: column; gap: 6px; }
-  .field-label { font-size: 11px; font-weight: 600; color: var(--slate); }
-  select, input[type="text"] {
-    width: 100%; padding: 10px 12px;
-    border: 1.5px solid var(--silver);
-    border-radius: 10px;
-    font-family: 'Inter', sans-serif;
-    font-size: 14px; font-weight: 500; color: var(--ink);
-    background: var(--smoke);
-    appearance: none;
-    -webkit-appearance: none;
-    outline: none;
-    transition: border-color .15s, box-shadow .15s;
-  }
-  select:focus, input[type="text"]:focus {
-    border-color: var(--sky);
-    box-shadow: 0 0 0 3px rgba(59,143,232,.15);
-    background: #fff;
-  }
-  .select-wrap { position: relative; }
-  .select-wrap::after {
-    content: '▾';
-    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-    color: var(--slate); pointer-events: none; font-size: 12px;
-  }
-
-  /* ── SENTENCE CARD ── */
-  .sentence-nav {
-    display: flex; align-items: center; gap: 10px;
-    margin-bottom: 14px;
-  }
-  .nav-btn {
-    width: 36px; height: 36px; border-radius: 10px;
-    border: 1.5px solid var(--silver);
-    background: var(--smoke); color: var(--slate);
-    font-size: 16px; cursor: pointer; display: flex;
-    align-items: center; justify-content: center;
-    transition: all .15s; flex-shrink: 0;
-  }
-  .nav-btn:hover:not(:disabled) { border-color: var(--sky); color: var(--blue); background: var(--ice); }
-  .nav-btn:disabled { opacity: .35; cursor: not-allowed; }
-  .sentence-counter {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 500; color: var(--slate);
-    white-space: nowrap;
-  }
-
-  .sentence-tag {
-    display: inline-block; padding: 3px 10px;
-    border-radius: 20px; font-size: 10px; font-weight: 700;
-    letter-spacing: .8px; text-transform: uppercase;
-    margin-bottom: 10px;
-  }
-  .tag-core { background: #FFF3E0; color: #E65100; }
-  .tag-specific { background: #E8F5E9; color: #2E7D32; }
-
-  .sentence-text {
-    font-size: 17px; font-weight: 500; line-height: 1.55;
-    color: var(--navy); padding: 14px 16px;
-    background: var(--ice);
-    border-radius: 10px; border-left: 3px solid var(--sky);
-    min-height: 72px;
-  }
-  .sentence-id {
-    margin-top: 8px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; color: var(--slate);
-  }
-
-  /* ── STATUS BAR ── */
-  .status-bar {
-    display: flex; align-items: center; gap: 8px;
-    padding: 10px 14px; border-radius: 10px;
-    font-size: 12px; font-weight: 600;
-    margin-bottom: 14px; transition: all .2s;
-  }
-  .status-idle    { background: var(--smoke); color: var(--slate); border: 1.5px solid var(--silver); }
-  .status-record  { background: #FFF5F5; color: var(--red); border: 1.5px solid #FFCDD2; }
-  .status-done    { background: #F0FBF6; color: #1B8C59; border: 1.5px solid #A8DFC5; }
-  .status-dot {
-    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-  }
-  .dot-idle   { background: var(--silver); }
-  .dot-record { background: var(--red); animation: pulse 1s infinite; }
-  .dot-done   { background: var(--mint); }
-  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
-
-  /* ── RECORDER CONTROLS ── */
-  .controls { display: flex; gap: 10px; margin-bottom: 14px; }
-
-  .btn-record {
-    flex: 1; padding: 16px 20px; border-radius: 12px; border: none;
-    font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700;
-    cursor: pointer; transition: all .15s;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-  }
-  .btn-record.idle {
-    background: linear-gradient(135deg, var(--blue), var(--sky));
-    color: #fff; box-shadow: 0 4px 14px rgba(26,92,184,.35);
-  }
-  .btn-record.idle:hover { box-shadow: 0 6px 20px rgba(26,92,184,.45); transform: translateY(-1px); }
-  .btn-record.recording {
-    background: linear-gradient(135deg, #C62828, var(--red));
-    color: #fff; box-shadow: 0 4px 14px rgba(232,64,64,.35);
-  }
-  .btn-record:disabled { opacity: .45; cursor: not-allowed; transform: none !important; }
-
-  .btn-icon {
-    width: 44px; height: 44px; border-radius: 10px; border: none;
-    cursor: pointer; font-size: 18px; display: flex;
-    align-items: center; justify-content: center;
-    transition: all .15s; flex-shrink: 0;
-  }
-  .btn-play  { background: var(--ice); color: var(--blue); border: 1.5px solid var(--sky); }
-  .btn-play:hover { background: var(--blue); color: #fff; }
-  .btn-trash { background: #FFF5F5; color: var(--red); border: 1.5px solid #FFCDD2; }
-  .btn-trash:hover { background: var(--red); color: #fff; }
-  .btn-icon:disabled { opacity: .3; cursor: not-allowed; }
-
-  /* ── WAVEFORM ── */
-  .waveform-wrap {
-    height: 52px; border-radius: 10px;
-    background: var(--smoke); border: 1.5px solid var(--silver);
-    overflow: hidden; margin-bottom: 14px;
-    display: flex; align-items: center; justify-content: center;
-  }
-  canvas#waveform { width: 100%; height: 52px; display: block; }
-  .waveform-empty {
-    font-size: 12px; color: var(--silver); font-weight: 500;
-    pointer-events: none;
-  }
-
-  /* ── TIMER ── */
-  .timer {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 22px; font-weight: 500; text-align: center;
-    color: var(--navy); letter-spacing: 1px;
-    padding: 6px 0; margin-bottom: 14px;
-  }
-  .timer.recording { color: var(--red); }
-
-  /* ── SUBMIT CARD ── */
-  .btn-submit {
-    width: 100%; padding: 16px; border-radius: 12px; border: none;
-    background: linear-gradient(135deg, #0B8C5A, var(--mint));
-    color: #fff; font-family: 'Inter', sans-serif;
-    font-size: 15px; font-weight: 700; cursor: pointer;
-    transition: all .15s; display: flex;
-    align-items: center; justify-content: center; gap: 8px;
-    box-shadow: 0 4px 14px rgba(0,196,140,.3);
-  }
-  .btn-submit:hover:not(:disabled) { box-shadow: 0 6px 20px rgba(0,196,140,.4); transform: translateY(-1px); }
-  .btn-submit:disabled { opacity: .4; cursor: not-allowed; transform: none; }
-
-  /* ── UPLOAD PROGRESS ── */
-  .upload-wrap { margin-top: 12px; display: none; }
-  .upload-label {
-    font-size: 11px; font-weight: 600; color: var(--slate);
-    display: flex; justify-content: space-between; margin-bottom: 6px;
-  }
-  .progress-bar {
-    height: 6px; border-radius: 4px; background: var(--silver); overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%; border-radius: 4px;
-    background: linear-gradient(90deg, var(--blue), var(--mint));
-    width: 0%; transition: width .3s;
-  }
-
-  /* ── LOG TABLE ── */
-  .log-card { overflow: hidden; }
-  .log-header {
-    display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 12px;
-  }
-  .log-title { font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: var(--slate); }
-  .log-count {
-    background: var(--navy); color: #fff;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600;
-    padding: 2px 8px; border-radius: 20px;
-  }
-  .log-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .log-table th {
-    text-align: left; padding: 6px 8px;
-    color: var(--slate); font-weight: 600; font-size: 11px;
-    border-bottom: 1.5px solid var(--silver);
-  }
-  .log-table td { padding: 7px 8px; border-bottom: 1px solid #F0F4F8; color: var(--ink); }
-  .log-table tr:last-child td { border-bottom: none; }
-  .log-table tr:hover td { background: var(--smoke); }
-  .badge {
-    display: inline-block; padding: 2px 8px; border-radius: 20px;
-    font-size: 10px; font-weight: 700;
-  }
-  .badge-ok   { background: #E8F5E9; color: #2E7D32; }
-  .badge-err  { background: #FFEBEE; color: #C62828; }
-  .badge-up   { background: #FFF8E1; color: #F57F17; }
-  .mono { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--slate); }
-
-  /* ── TOAST ── */
-  .toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
-    background: var(--navy); color: #fff;
-    padding: 12px 20px; border-radius: 12px;
-    font-size: 13px; font-weight: 600;
-    box-shadow: 0 8px 24px rgba(15,39,68,.35);
-    transition: transform .25s cubic-bezier(.34,1.56,.64,1);
-    z-index: 999; white-space: nowrap; max-width: 90vw;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .toast.show { transform: translateX(-50%) translateY(0); }
-  .toast.success { background: #0B6E47; }
-  .toast.error   { background: #A32020; }
-
-  /* ── CHECKLIST ── */
-  .checklist { display: flex; flex-direction: column; gap: 8px; }
-  .check-item {
-    display: flex; align-items: flex-start; gap: 10px;
-    padding: 10px 12px; border-radius: 10px;
-    background: var(--smoke); border: 1px solid var(--silver);
-    font-size: 13px; color: var(--ink); line-height: 1.4;
-    cursor: pointer; transition: background .1s;
-    user-select: none;
-  }
-  .check-item.checked { background: #F0FBF6; border-color: #A8DFC5; color: #1B5E40; }
-  .check-box {
-    width: 18px; height: 18px; border-radius: 5px; flex-shrink: 0;
-    border: 2px solid var(--silver); margin-top: 1px;
-    display: flex; align-items: center; justify-content: center;
-    transition: all .1s;
-  }
-  .check-item.checked .check-box { background: var(--mint); border-color: var(--mint); color: #fff; font-size: 11px; }
-
-  /* ── SKIP / DONE OVERLAY ── */
-  .sentence-done-badge {
-    display: none; align-items: center; gap: 6px;
-    background: #F0FBF6; border: 1.5px solid #A8DFC5;
-    border-radius: 8px; padding: 8px 12px;
-    font-size: 12px; font-weight: 600; color: #1B8C59;
-    margin-bottom: 10px;
-  }
-  .sentence-done-badge.visible { display: flex; }
-
-  @media (prefers-color-scheme: dark) {
-    /* intentionally not dark mode — recording environments need full brightness */
-  }
+  :root{--navy:#0F2744;--blue:#1A5CB8;--sky:#3B8FE8;--ice:#EBF4FF;--mint:#00C48C;--red:#E84040;--white:#fff;--smoke:#F7F9FC;--silver:#C8D6E8;--slate:#6B839A;--ink:#1A2B3C}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100vh;background:var(--smoke);font-family:'Inter',system-ui,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+  .header{background:var(--navy);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(15,39,68,.35)}
+  .logo{display:flex;align-items:center;gap:10px}
+  .logo-mark{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--sky),var(--mint));display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff}
+  .logo-text{font-weight:700;font-size:18px;color:#fff;letter-spacing:.5px}
+  .progress-pill{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;color:rgba(255,255,255,.85);font-family:'JetBrains Mono',monospace}
+  .main{max-width:540px;margin:0 auto;padding:20px 16px 60px}
+  .card{background:var(--white);border-radius:16px;padding:20px;margin-bottom:14px;box-shadow:0 1px 4px rgba(15,39,68,.07),0 4px 16px rgba(15,39,68,.05);border:1px solid rgba(15,39,68,.07)}
+  .card-label{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--slate);margin-bottom:12px;display:block}
+  .setup-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .field-wrap{display:flex;flex-direction:column;gap:6px}
+  .field-label{font-size:11px;font-weight:600;color:var(--slate)}
+  select,input[type=text]{width:100%;padding:10px 12px;border:1.5px solid var(--silver);border-radius:10px;font-family:'Inter',sans-serif;font-size:14px;font-weight:500;color:var(--ink);background:var(--smoke);appearance:none;-webkit-appearance:none;outline:none;transition:border-color .15s,box-shadow .15s}
+  select:focus,input[type=text]:focus{border-color:var(--sky);box-shadow:0 0 0 3px rgba(59,143,232,.15);background:#fff}
+  .select-wrap{position:relative}
+  .select-wrap::after{content:'▾';position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--slate);pointer-events:none}
+  .consent-card{background:linear-gradient(135deg,#FFF8E1,#FFF3E0);border:2px solid #FFB74D;border-radius:16px;padding:20px;margin-bottom:14px}
+  .consent-title{font-weight:700;font-size:13px;color:#E65100;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  .consent-text{font-size:15px;font-weight:500;line-height:1.6;color:#3E2723;background:#fff;border-radius:10px;padding:14px;border-left:3px solid #FF9800;margin-bottom:12px}
+  .consent-note{font-size:11px;color:#BF360C;font-weight:600}
+  .sentence-nav{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .nav-btn{width:36px;height:36px;border-radius:10px;border:1.5px solid var(--silver);background:var(--smoke);color:var(--slate);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+  .nav-btn:hover:not(:disabled){border-color:var(--sky);color:var(--blue);background:var(--ice)}
+  .nav-btn:disabled{opacity:.35;cursor:not-allowed}
+  .sentence-counter{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:500;color:var(--slate);white-space:nowrap}
+  .sentence-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-bottom:10px}
+  .tag-consent{background:#FFF3E0;color:#BF360C}
+  .tag-core{background:#E3F2FD;color:#1565C0}
+  .tag-specific{background:#E8F5E9;color:#2E7D32}
+  .sentence-text{font-size:17px;font-weight:500;line-height:1.6;color:var(--navy);padding:14px 16px;background:var(--ice);border-radius:10px;border-left:3px solid var(--sky);min-height:72px}
+  .sentence-id{margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--slate)}
+  .take-badge{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:#EDE7F6;color:#4527A0}
+  .status-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;font-size:12px;font-weight:600;margin-bottom:14px;transition:all .2s}
+  .status-idle{background:var(--smoke);color:var(--slate);border:1.5px solid var(--silver)}
+  .status-record{background:#FFF5F5;color:var(--red);border:1.5px solid #FFCDD2}
+  .status-done{background:#F0FBF6;color:#1B8C59;border:1.5px solid #A8DFC5}
+  .status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .dot-idle{background:var(--silver)}
+  .dot-record{background:var(--red);animation:pulse 1s infinite}
+  .dot-done{background:var(--mint)}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+  .controls{display:flex;gap:10px;margin-bottom:14px}
+  .btn-record{flex:1;padding:16px 20px;border-radius:12px;border:none;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn-record.idle{background:linear-gradient(135deg,var(--blue),var(--sky));color:#fff;box-shadow:0 4px 14px rgba(26,92,184,.35)}
+  .btn-record.idle:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(26,92,184,.45)}
+  .btn-record.recording{background:linear-gradient(135deg,#C62828,var(--red));color:#fff}
+  .btn-record:disabled{opacity:.45;cursor:not-allowed;transform:none!important}
+  .btn-icon{width:44px;height:44px;border-radius:10px;border:none;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+  .btn-play{background:var(--ice);color:var(--blue);border:1.5px solid var(--sky)}
+  .btn-play:hover{background:var(--blue);color:#fff}
+  .btn-trash{background:#FFF5F5;color:var(--red);border:1.5px solid #FFCDD2}
+  .btn-trash:hover{background:var(--red);color:#fff}
+  .btn-icon:disabled{opacity:.3;cursor:not-allowed}
+  .waveform-wrap{height:52px;border-radius:10px;background:var(--smoke);border:1.5px solid var(--silver);overflow:hidden;margin-bottom:14px;display:flex;align-items:center;justify-content:center;position:relative}
+  canvas#waveform{width:100%;height:52px;display:block}
+  .waveform-empty{font-size:12px;color:var(--silver);font-weight:500;position:absolute}
+  .timer{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500;text-align:center;color:var(--navy);letter-spacing:1px;padding:6px 0;margin-bottom:14px}
+  .timer.recording{color:var(--red)}
+  .btn-submit{width:100%;padding:16px;border-radius:12px;border:none;background:linear-gradient(135deg,#0B8C5A,var(--mint));color:#fff;font-family:'Inter',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 14px rgba(0,196,140,.3)}
+  .btn-submit:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,196,140,.4)}
+  .btn-submit:disabled{opacity:.4;cursor:not-allowed;transform:none}
+  .upload-wrap{margin-top:12px;display:none}
+  .upload-label{font-size:11px;font-weight:600;color:var(--slate);display:flex;justify-content:space-between;margin-bottom:6px}
+  .progress-bar{height:6px;border-radius:4px;background:var(--silver);overflow:hidden}
+  .progress-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--blue),var(--mint));width:0%;transition:width .3s}
+  .log-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .log-title{font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:var(--slate)}
+  .log-count{background:var(--navy);color:#fff;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px}
+  .log-table{width:100%;border-collapse:collapse;font-size:12px}
+  .log-table th{text-align:left;padding:6px 8px;color:var(--slate);font-weight:600;font-size:11px;border-bottom:1.5px solid var(--silver)}
+  .log-table td{padding:7px 8px;border-bottom:1px solid #F0F4F8;color:var(--ink)}
+  .log-table tr:last-child td{border-bottom:none}
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700}
+  .badge-ok{background:#E8F5E9;color:#2E7D32}
+  .badge-save{background:#E3F2FD;color:#1565C0}
+  .badge-err{background:#FFEBEE;color:#C62828}
+  .mono{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--slate)}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--navy);color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(15,39,68,.35);transition:transform .25s cubic-bezier(.34,1.56,.64,1);z-index:999;white-space:nowrap;max-width:90vw;display:flex;align-items:center;gap:8px}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+  .toast.success{background:#0B6E47}
+  .toast.error{background:#A32020}
+  .checklist{display:flex;flex-direction:column;gap:8px}
+  .check-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;background:var(--smoke);border:1px solid var(--silver);font-size:13px;color:var(--ink);line-height:1.4;cursor:pointer;user-select:none;transition:background .1s}
+  .check-item.checked{background:#F0FBF6;border-color:#A8DFC5;color:#1B5E40}
+  .check-box{width:18px;height:18px;border-radius:5px;flex-shrink:0;border:2px solid var(--silver);margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .1s}
+  .check-item.checked .check-box{background:var(--mint);border-color:var(--mint);color:#fff;font-size:11px}
+  .done-badge{display:none;align-items:center;gap:6px;background:#F0FBF6;border:1.5px solid #A8DFC5;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:600;color:#1B8C59;margin-bottom:10px}
+  .done-badge.visible{display:flex}
+  .id-banner{background:linear-gradient(135deg,var(--navy),var(--blue));border-radius:12px;padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
+  .id-banner-label{font-size:11px;color:rgba(255,255,255,.7);font-weight:600;letter-spacing:.8px;text-transform:uppercase}
+  .id-banner-value{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:#fff;letter-spacing:2px}
+  .id-note{font-size:11px;color:rgba(255,255,255,.6);margin-top:2px}
 </style>
 </head>
 <body>
-
-<!-- ══ HEADER ══════════════════════════════════════════════════════════════ -->
 <header class="header">
   <div class="logo">
     <div class="logo-mark">AL</div>
     <span class="logo-text">Alsidian</span>
   </div>
-  <div class="progress-pill" id="headerProgress">0 / 100</div>
+  <div class="progress-pill" id="headerProgress">0 / 71</div>
 </header>
-
-<!-- ══ MAIN ════════════════════════════════════════════════════════════════ -->
 <main class="main">
 
-  <!-- STEP 1 — IDENTITY -->
-  <div class="card" id="cardIdentity">
+  <!-- STEP 1: IDENTITY -->
+  <div class="card">
     <span class="card-label">Step 1 — Your Details</span>
     <div class="setup-grid">
       <div class="field-wrap">
-        <label class="field-label">Speaker ID</label>
-        <input type="text" id="speakerId" placeholder="e.g. SP001" maxlength="6"
-               style="text-transform:uppercase;font-family:'JetBrains Mono',monospace;">
+        <label class="field-label">Mobile Number (your Speaker ID)</label>
+        <input type="text" id="mobileInput" placeholder="10-digit number" maxlength="10"
+               inputmode="numeric" pattern="[0-9]*"
+               style="font-family:'JetBrains Mono',monospace;letter-spacing:1px;">
       </div>
       <div class="field-wrap">
         <label class="field-label">Language</label>
         <div class="select-wrap">
           <select id="langSelect">
             <option value="">— Select —</option>
-            <option value="HGL">Hinglish</option>
-            <option value="TGL">Tanglish</option>
-            <option value="TLG">Teluglish</option>
+            <option value="HGL">Hinglish (Hindi + English)</option>
+            <option value="TGL">Tanglish (Tamil + English)</option>
+            <option value="TLG">Teluglish (Telugu + English)</option>
             <option value="TAM">Tamil</option>
             <option value="TEL">Telugu</option>
             <option value="ODI">Odia</option>
+            <option value="MAR">Marathi</option>
+            <option value="GUJ">Gujarati</option>
           </select>
         </div>
       </div>
     </div>
+    <div id="idBanner" style="display:none;margin-top:12px">
+      <div class="id-banner">
+        <div>
+          <div class="id-banner-label">Your Speaker ID</div>
+          <div class="id-banner-value" id="idDisplay">—</div>
+          <div class="id-note">This ID is auto-saved with every recording</div>
+        </div>
+        <div style="font-size:28px">🎙</div>
+      </div>
+    </div>
   </div>
 
-  <!-- PRE-RECORDING CHECKLIST -->
-  <div class="card" id="cardChecklist">
+  <!-- CHECKLIST -->
+  <div class="card">
     <span class="card-label">Step 2 — Before You Start</span>
     <div class="checklist">
-      <div class="check-item" onclick="toggleCheck(this)">
-        <div class="check-box"></div>
-        I am in a quiet room — door closed, fan and TV off
-      </div>
-      <div class="check-item" onclick="toggleCheck(this)">
-        <div class="check-box"></div>
-        My phone is in Airplane mode (no calls or notifications)
-      </div>
-      <div class="check-item" onclick="toggleCheck(this)">
-        <div class="check-box"></div>
-        I will hold my phone 10–15 cm from my mouth
-      </div>
-      <div class="check-item" onclick="toggleCheck(this)">
-        <div class="check-box"></div>
-        I have read the current sentence before recording
-      </div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div>I am in a quiet room — door closed, fan and TV off</div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div>My phone is in Airplane mode (no calls or notifications)</div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div>I will hold my phone 10–15 cm from my mouth</div>
+      <div class="check-item" onclick="toggleCheck(this)"><div class="check-box"></div>I have read the sentence below before pressing Record</div>
     </div>
   </div>
 
@@ -397,936 +166,1051 @@
   <div class="card">
     <div class="sentence-nav">
       <button class="nav-btn" id="btnPrev" onclick="changeSentence(-1)" disabled>‹</button>
-      <span class="sentence-counter" id="sentenceCounter">Sentence 1 of 100</span>
+      <span class="sentence-counter" id="sentenceCounter">Recording 1 of 71</span>
       <button class="nav-btn" id="btnNext" onclick="changeSentence(1)">›</button>
     </div>
-
-    <div id="sentenceTag" class="sentence-tag tag-core">Common Core</div>
-    <div class="sentence-text" id="sentenceText">Fill in your Speaker ID and Language above to begin.</div>
-    <div class="sentence-id mono" id="sentenceId">Sentence ID: —</div>
-
-    <div class="sentence-done-badge" id="doneBadge">
-      <span>✓</span> Uploaded successfully
+    <div id="sentenceTag" class="sentence-tag tag-consent">Spoken Consent</div>
+    <div class="sentence-text" id="sentenceText">Enter your mobile number and select your language to begin.</div>
+    <div class="sentence-id mono" id="sentenceIdRow">
+      File: — <span class="take-badge" id="takeBadge" style="display:none"></span>
     </div>
+    <div class="done-badge" id="doneBadge"><span>✓</span> Uploaded successfully</div>
   </div>
 
   <!-- RECORDER -->
   <div class="card">
     <span class="card-label">Step 3 — Record</span>
-
     <div class="status-bar status-idle" id="statusBar">
       <div class="status-dot dot-idle" id="statusDot"></div>
       <span id="statusText">Ready to record</span>
     </div>
-
     <div class="waveform-wrap">
       <canvas id="waveform"></canvas>
       <span class="waveform-empty" id="waveformEmpty">Waveform appears here while recording</span>
     </div>
-
     <div class="timer" id="timer">0:00</div>
-
     <div class="controls">
       <button class="btn-record idle" id="btnRecord" onclick="toggleRecord()">
-        <span id="recIcon">⏺</span>
-        <span id="recLabel">Start Recording</span>
+        <span id="recIcon">⏺</span><span id="recLabel">Start Recording</span>
       </button>
-      <button class="btn-icon btn-play" id="btnPlay" onclick="playBack()" disabled title="Play back">▶</button>
-      <button class="btn-icon btn-trash" id="btnTrash" onclick="discardRecording()" disabled title="Discard">🗑</button>
+      <button class="btn-icon btn-play" id="btnPlay" onclick="playBack()" disabled>▶</button>
+      <button class="btn-icon btn-trash" id="btnTrash" onclick="discardRecording()" disabled>🗑</button>
     </div>
   </div>
 
   <!-- SUBMIT -->
   <div class="card">
-    <span class="card-label">Step 4 — Submit Recording</span>
+    <span class="card-label">Step 4 — Submit</span>
     <button class="btn-submit" id="btnSubmit" onclick="submitRecording()" disabled>
       <span>⬆</span> Submit & Move to Next
     </button>
     <div class="upload-wrap" id="uploadWrap">
-      <div class="upload-label">
-        <span id="uploadStatus">Uploading…</span>
-        <span id="uploadPct">0%</span>
-      </div>
+      <div class="upload-label"><span id="uploadStatus">Uploading…</span><span id="uploadPct">0%</span></div>
       <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
     </div>
   </div>
 
-  <!-- SESSION LOG -->
-  <div class="card log-card">
+  <!-- LOG -->
+  <div class="card">
     <div class="log-header">
       <span class="log-title">Session Log</span>
       <span class="log-count" id="logCount">0</span>
     </div>
-    <table class="log-table" id="logTable">
-      <thead>
-        <tr>
-          <th>File</th>
-          <th>Dur.</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody id="logBody">
-        <tr><td colspan="3" style="color:var(--silver);font-size:12px;padding:12px 8px;">No recordings yet</td></tr>
-      </tbody>
+    <table class="log-table">
+      <thead><tr><th>File</th><th>Dur.</th><th>Status</th></tr></thead>
+      <tbody id="logBody"><tr><td colspan="3" style="color:var(--silver);font-size:12px;padding:12px 8px">No recordings yet</td></tr></tbody>
     </table>
   </div>
 
 </main>
-
-<!-- TOAST -->
 <div class="toast" id="toast"></div>
-
-<!-- ══ SCRIPT ═══════════════════════════════════════════════════════════════ -->
 <script>
-// ══════════════════════════════════════════════════════════════════════════
-//  CONFIGURATION — EDIT THIS SECTION ONLY
-// ══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════
 const CONFIG = {
-  // Paste your Google Apps Script Web App URL here after deployment
-  // See setup instructions for how to get this URL
-  UPLOAD_URL: "https://script.google.com/a/macros/alsidian.com/s/AKfycbyAm_G97quZpyvdUMFib9-Arx8B6WxBJw5hQfWDVdoyhBkiqOB2DUvcfqMHT5qwE6Sw_w/exec",
-
-  // Maximum recording duration in seconds (hard stop)
-  MAX_DURATION: 25,
-
-  // Minimum acceptable duration in seconds
+  UPLOAD_URL:   "YOUR_APPS_SCRIPT_URL_HERE",
+  MAX_DURATION: 60,   // consent can be longer
   MIN_DURATION: 2,
 };
 
-// ══════════════════════════════════════════════════════════════════════════
-//  SENTENCE DATA — 100 SENTENCES PER LANGUAGE
-//  First 40 = Common Core (same across all languages)
-//  Last 60  = Language-specific
-// ══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
+//  CONSENT — 1 sentence, all languages
+//  Speaker says this in THEIR OWN WORDS but
+//  reads the romanised prompt shown on screen.
+// ═══════════════════════════════════════════
+const CONSENT = {
+  HGL: "Mera naam [apna naam bolein] hai. Meri umar 18 saal se zyaada hai. Main apni marzi se Alsidian ke voice recording project mein participate karne ki consent deta/deti hoon, aur samajhta/samajhti hoon ki meri recordings AI aur speech technology development ke liye use ho sakti hain.",
+  TGL: "En peyar [ungal peyar sollunga]. Enakku 18 vayathu athigam. Naan Alsidian-in voice recording project-il sonthamarpu participate pannuvatharkku consent tharugiren, en recordings AI matrum speech technology development-ku use aagalaam enpathai purindhukolugiren.",
+  TLG: "Na peru [mee peru cheppandi]. Naku padhenimidi sanvatsaraalatho ekkuva vayasu undi. Nenu Alsidian voice recording project lo paalgu neyyadaaniki ishtapoorvakamgaa consent isthunnaanu, mariyu na recordings AI mariyu speech technology development ki upayoginchabadataayani artham chesukuntunnaanu.",
+  TAM: "En peyar [ungal peyar sollunga]. Enakku 18 vayathu athigam. Naan Alsidian-in voice recording project-il sonthamarpu participate pannuvatharkku consent tharugiren, en recordings AI matrum speech technology development-ku use aagalaam enpathai purindhukolugiren.",
+  TEL: "Na peru [mee peru cheppandi]. Naku padhenimidi sanvatsaraalatho ekkuva vayasu undi. Nenu Alsidian voice recording project lo paalgu neyyadaaniki ishtapoorvakamgaa consent isthunnaanu, mariyu na recordings AI mariyu speech technology development ki upayoginchabadataayani artham chesukuntunnaanu.",
+  ODI: "Mora naama [aapananka naama bolanti]. Mora bayasa atthaara barsharu upare. Mun Alsidian-ra voice recording project-re bhaagebaaibaa paaiin swechhaapu consent duchi, mora recordings AI o speech technology development paaiin byabahaar haibaa boli bujhuchi.",
+  MAR: "Maza naav [tumcha naav saanga] aahe. Mazi vay aaathara varshaanpeksha jaast aahe. Mi swakhoushiine Alsidian-chya voice recording project-mdhye bhaag ghenyaachi consent deto/dete, aani maza recordings AI aani speech technology development saathi vaparla jaaoo shakel he maala mahit aahe.",
+  GUJ: "Maarun naam [tamaarun naam bolo] chhe. Mari umer aadarsh varsithi vadhare chhe. Hoon meri marjithi Alsidian na voice recording project maa bhag leva maate consent aapun chhun, ane mara recordings ne AI ane speech technology development maate vaparvaama aavse te hoon samajhun chhun.",
+};
 
-const COMMON_CORE = [
-  "Good morning. How are you today?",
-  "I'm doing well, thank you.",
-  "What is your name? Where are you from?",
-  "Nice to meet you. Please sit down.",
-  "See you tomorrow. Have a good evening.",
-  "How long have you been living here?",
-  "The weather is very pleasant today.",
-  "Please speak slowly, I did not understand.",
-  "Today is Monday, the fifteenth of August.",
-  "The meeting is scheduled at three thirty in the afternoon.",
-  "My phone number is nine eight seven six five four three two one zero.",
-  "I was born in nineteen ninety-five.",
-  "The ticket costs four hundred and fifty rupees.",
-  "We need to submit this by Friday evening.",
-  "Turn left at the next signal and then go straight.",
-  "The hospital is about two kilometres from here.",
-  "Can you tell me the way to the railway station?",
-  "I need to go to the airport by six o'clock.",
-  "This is the correct address, please stop here.",
-  "How much does this cost? Is there a discount?",
-  "I would like to pay by UPI.",
-  "Do you have this in a smaller size?",
-  "Please give me a receipt for this purchase.",
-  "The order will be delivered by tomorrow evening.",
-  "I have a headache and mild fever since yesterday.",
-  "Please call the doctor immediately.",
-  "Where is the nearest pharmacy?",
-  "I am allergic to penicillin.",
-  "Call one zero eight for an ambulance.",
-  "The internet connection is very slow today.",
-  "Please reset my password. I have forgotten it.",
-  "Can you send me the file on WhatsApp?",
-  "My phone battery is about to die.",
-  "Download the app from the Play Store.",
-  "The OTP has been sent to your registered number.",
-  "I think this is a very good idea.",
-  "We should discuss this with the team first.",
-  "I am not sure about this decision.",
-  "This movie was really entertaining.",
-  "The food here is excellent — I will come again.",
-];
-
-const LANG_SPECIFIC = {
+// ═══════════════════════════════════════════
+//  COMMON CORE — 40 sentences per language
+//  ALL sentences have English words mixed in
+//  for code-mix languages (HGL/TGL/TLG).
+//  Pure languages (TAM/TEL/ODI/MAR/GUJ) use
+//  their own romanised script throughout.
+// ═══════════════════════════════════════════
+const CORE = {
   HGL: [
-    "Yaar, aaj office mein bahut kaam tha.",
-    "Meeting cancel ho gayi, toh chill karte hain.",
-    "Kya scene hai? Kuch plan hai weekend ka?",
-    "Bhai, mujhe ek favour chahiye tha.",
-    "Kal deadline hai, so tonight grind karna padega.",
-    "Maine already usko message kar diya hai.",
-    "Wo project abhi pending hai, koi update nahi.",
-    "Boss ne approve kar diya finally!",
-    "Tension mat le, sab ho jayega.",
-    "Thoda wait karo, main aata hoon.",
-    "Aaj lunch mein kya khaya? Ghar ka tha ya baahar?",
-    "Chai bana de yaar, mujhe neend aa rahi hai.",
-    "Yeh dahi wada ekdum mast tha!",
-    "Bhaiyya, ek plate pav bhaji aur extra butter.",
-    "Mujhe dieting pe rehna chahiye but samosa dikhte hi bhool jaata hoon.",
-    "Auto milega kya is time pe?",
-    "Uber surge pricing dekh ke dil toot gaya.",
-    "Bhai, traffic mein phansa hoon, 20 minute late hoga.",
-    "Metro pakad lo, jaldi pahunch jaoge.",
-    "Petrol bhar do, almost empty hai.",
-    "Yeh toh bahut mahenga hai, thoda kam karo.",
-    "Sale chal raha hai kya? Kab tak hai?",
-    "UPI se kar deta hoon, change nahi hai.",
-    "EMI pe le lete hain, no-cost EMI hai.",
-    "Cashback kitna milega is offer mein?",
-    "Sach mein? Mujhe toh pata hi nahi tha!",
-    "Yeh toh bahut unfair hai.",
-    "Bhai log, group mein post karo, sab ko batao.",
-    "Mujhe lagta hai hum sahi direction mein hain.",
-    "Uska attitude thoda off tha aaj.",
-    "Gym jaana band kar diya kya?",
-    "Doctor ne rest karne bola hai.",
-    "Mujhe back pain ho raha hai, koi doctor suggest karo.",
-    "Paani zyada piya karo, dehydrated lag rahe ho.",
-    "Neend poori nahi ho rahi, screen time kam karna chahiye.",
-    "Startup grind real hai bhai.",
-    "Appraisal mein kya hua? Hike mili?",
-    "Remote work mein focus karna mushkil hota hai.",
-    "Presentation ready hai, feedback do jara.",
-    "Client unhappy hai, jugaad lagana padega.",
-    "App crash ho gaya dobara, review dena padega.",
-    "Screenshot le aur mujhe bhej de.",
-    "Notification off karo, distract mat ho.",
-    "Spam filter ne important mail bhi rok liya.",
-    "Update aaya hai, install karo.",
-    "Yaar, bahut thak gaya hoon aajkal.",
-    "Itna excited hoon, pata nahi kaise wait karun.",
-    "Seriously? Yeh toh bahut funny hai!",
-    "Bura mat maano, main sirf mazak kar raha tha.",
-    "Dil se bolunga, mujhe tumse baat karke accha lagta hai.",
-    "Achha, toh phir kya plan hai?",
-    "Basically kya ho raha hai wahan?",
-    "Obviously bata dete, koi secret nahi hai.",
-    "Honestly, mujhe kuch aur expect tha.",
-    "Technically sahi hai, practically nahi chalega.",
-    "Waise, tune yeh show dekha kya?",
-    "Dekh, situation complicated hai.",
-    "Finally khatam hua yeh project!",
-    "Chalo, kal milte hain. Take care.",
-    "Bhai tu toh genius hai!",
+    // Greetings
+    "Good morning! Aap kaisa/kaisi feel kar rahe/rahi hain aaj?",
+    "I'm doing great, actually. Aur aap?",
+    "Nice to meet you! Aap kahan se belong karte hain?",
+    "Please sit down. Kya main aapki kuch help kar sakta/sakti hoon?",
+    "See you tomorrow. Have a good evening, take care!",
+    "How long have you been living in this city? Settled hain yahan?",
+    "Today's weather is so pleasant, yaar — perfect for a walk.",
+    "Sorry, please repeat that. I didn't quite understand.",
+    // Time & numbers
+    "Today is Monday, the fifteenth of August — happy Independence Day!",
+    "The meeting is scheduled at 3:30 PM, so please don't be late.",
+    "My number is 9876543210 — save it on WhatsApp.",
+    "I was born in 1995. That makes me almost 30 now!",
+    "The ticket price is 450 rupees — not too bad for a concert.",
+    "Deadline is Friday evening, so we need to move fast.",
+    // Navigation
+    "Turn left at the next signal, phir seedha jaana hai.",
+    "The hospital is about 2 km from here — maybe 10 minute walk.",
+    "Can you please guide me to the railway station?",
+    "I have to reach the airport by 6 AM, so leaving tonight.",
+    "This is the correct address — please stop here, driver.",
+    // Shopping
+    "How much is this? Koi discount available hai kya?",
+    "I'll pay by UPI — PhonePe or GPay, whatever works.",
+    "Do you have a smaller size? This one is too big for me.",
+    "Please give me a proper receipt — it's for office reimbursement.",
+    "The order will be delivered tomorrow evening — track kar lena.",
+    // Health
+    "I've had a headache and mild fever since yesterday night.",
+    "Please call the doctor immediately — this is getting serious.",
+    "Where is the nearest pharmacy? I need some medicine urgently.",
+    "I'm allergic to penicillin, so please check before prescribing.",
+    "Call 108 for the ambulance — don't waste any time.",
+    // Tech & digital
+    "The internet is super slow today — is the server down?",
+    "Please reset my password, I've been locked out of my account.",
+    "Can you share the file on WhatsApp or email? Whichever is easier.",
+    "My phone battery is at 3% — do you have a charger?",
+    "Download the app from the Play Store or App Store.",
+    "Your OTP has been sent to your registered mobile number.",
+    // Opinions & general
+    "I genuinely think this is a very good idea — let's go for it.",
+    "Let's discuss this with the full team before making a decision.",
+    "Honestly, I'm not 100% sure about this yet — need more time.",
+    "This movie was so entertaining — totally paisa vasool!",
+    "The food here is absolutely amazing — I'll definitely come back.",
   ],
   TGL: [
-    "Enna pa, epdi irukka?",
-    "Office-la work load romba aachu da.",
-    "Meeting confirm aachaa? Time change aagaliyaa?",
-    "Naan ippave pora, auto book panni vitaen.",
-    "Yov, deadline-a miss pannidadhey.",
-    "Project submit panniten, approval pending.",
-    "Client-kku call pannuvena illa message pannuvena?",
-    "Boss epdi irukanga today?",
-    "Stress-a iruku, oru coffee vaangalama?",
-    "Semma work pressure, break edukkave time illai.",
-    "Saapda pora? Mess-la saadham nalla illai innikku.",
-    "Filter coffee kudukka maataangala ithu varaikum?",
-    "Biryani saaptuvome aa? Kottivakkam-la nalla hotel iruku.",
-    "Dosa saappitta? Sambar super aa irundhuchu.",
-    "Akka, oru parcel poda mudiyuma?",
-    "Bus vrum, quick-a vaa.",
-    "Traffic romba aachu, late aaguthu.",
-    "Share auto-la pona cheap-a poidum.",
-    "Google Maps open panni address check panna solu.",
-    "Station pakkathla drop pannuveengala?",
-    "Ennanga rate? Discount kuduppeengala?",
-    "UPI accept panreengala?",
-    "Receipt venum, company expense-ku.",
-    "Return policy enna? Fit aagala.",
-    "Online-la mela vilaiku iruku, match panneengala?",
-    "Unmaiyilayaa? Enakku theriyave theriyaadhu!",
-    "Romba over-aa iruku ithu.",
-    "Group-la share pannunga, eppavum miss pannuveinga.",
-    "Yov, ithellam correct-aa nu theriyalai.",
-    "Avaloda attitude-u today romba off-aa irundhuchu.",
-    "Gym poga marandhuteengala?",
-    "Doctor rest edukka sonnar.",
-    "Tablet saappitta? On time saapidu.",
-    "Thanni romba kudikanum, dehydrated-a theriyuthu.",
-    "Neeppu pochu? Early-a thoonganum.",
-    "Startup life-u easy illai machaan.",
-    "Hike ketpomaa? Appraisal time.",
-    "Work from home-la focus aagave kastam.",
-    "Presentation-u ready aa? Feedback paesu.",
-    "Client side-la problem, fix pannanum.",
-    "App crash aaguthu, review podu.",
-    "Screenshot eduthu pathuppu.",
-    "Notification-a off panni vidu, distract aagadhey.",
-    "Spam-la important mail pochu.",
-    "Update install panna sollunga.",
-    "Yov, romba tired-a iruku.",
-    "So excited-aa iruku, wait panna kashtam.",
-    "Adhellam joke maari pesinen, serious-a edukkadhey.",
-    "Honestly, vera mathiri expect pannen.",
-    "Technically correct, but practically work aagaadhu.",
-    "Aprom enna pannurey?",
-    "Basically enna problem?",
-    "Obviously solluven, secret illai.",
-    "Finally mudinjuchu!",
-    "Itha paaru, situation complicated.",
-    "Nee pathiyaa aa that show?",
-    "Oru vaela vera plan irukaa?",
-    "Naalaikki paesom. Take care pa.",
-    "Machaan, nee genius da!",
-    "Semma idea, proceed pannalam.",
+    "Good morning! Neenga epdi feel panreenga today?",
+    "I'm doing great, thanks! Neenga epdi?",
+    "Nice to meet you! Neenga enga area-la irukeenga?",
+    "Please sit down. Ungalukku enna help pannalaam?",
+    "See you tomorrow! Have a good evening, take care!",
+    "How long have you been staying in this city? Settled-aa irukeenga?",
+    "Today's weather is so pleasant-aa iruku — perfect for a walk.",
+    "Sorry, please repeat. I didn't fully understand-aa panninen.",
+    "Today is Monday, August fifteen — Independence Day!",
+    "The meeting is at 3:30 PM sharp — please don't be late.",
+    "My number is 9876543210 — WhatsApp-la save panniko.",
+    "I was born in 1995 — almost 30 now, believe it or not!",
+    "Ticket price is 450 rupees — not bad for a concert-aa?",
+    "Deadline is Friday evening — we need to move fast-aa.",
+    "Next signal-la left turn panniko, phir straight-a po.",
+    "The hospital is about 2 km-la iruku — maybe 10 minute walk.",
+    "Railway station-ku route solluveengalaa please?",
+    "Airport-la 6 AM-ku reach aaganum — so tonight-a purappadanum.",
+    "This is the correct address — please stop here, driver.",
+    "Ennanga price? Any discount available-aa?",
+    "UPI-la pay pannuren — PhonePe or GPay, whatever works.",
+    "Smaller size irukaa? This one is too big for me.",
+    "Please receipt kudunga — office reimbursement-ku.",
+    "Order tomorrow evening-ku deliver aagum — track panniko.",
+    "Yesterday night-la irundhu headache and mild fever iruku.",
+    "Please doctor-a immediately call pannunga — serious-aa iruku.",
+    "Nearest pharmacy enga iruku? Urgent-aa medicine venum.",
+    "I'm allergic to penicillin — please check before prescribing.",
+    "Call 108 for ambulance — don't waste any time.",
+    "Internet today super slow-aa iruku — server down-aa?",
+    "Password reset pannunga please — account lock out aagittaen.",
+    "File-a WhatsApp or email-la share pannuveengalaa?",
+    "Phone battery is at 3% — charger irukaa?",
+    "App-a Play Store or App Store-la download panniko.",
+    "OTP ungal registered mobile number-ku send aagirukku.",
+    "This is genuinely a very good idea — let's go for it!",
+    "Full team-kku discuss pannitu decision edukkanum.",
+    "Honestly, I'm not 100% sure yet — konjam time venum.",
+    "This movie was so entertaining — total paisa vasool!",
+    "Food here is amazing-aa iruku — definitely come back pannuvaen.",
   ],
   TLG: [
-    "Enti bro, ela unnav?",
-    "Office lo work chala ekkuva ayyindi.",
-    "Meeting confirm ayyindaa? Time marchaaraa?",
-    "Nenu ippude veltunna, auto book chesaanu.",
-    "Deadline miss avvaku.",
-    "Project submit chesaanu, approval pending.",
-    "Client ki call cheyyanaa, message cheyyanaa?",
-    "Boss today ela unnaru?",
-    "Stress ga undi, oka coffee taagutaamaa?",
-    "Work pressure ekkuva ga undi, break time ledu.",
-    "Tinaniki veltavaa? Mess lo food baaledu ee roju.",
-    "Filter coffee isthaaraa ilaa varaku?",
-    "Biryani tindaamaa? Gachibowli lo chala hotel undi.",
-    "Idli saapidav? Chutney super ga undi.",
-    "Akka, oka parcel pampistaaraa?",
-    "Bus vastundi, tavaraga raa.",
-    "Traffic ekkuva ayyindi, late avutundi.",
-    "Share auto lo vaste cheap avutundi.",
-    "Google Maps open chesi address check cheyyi.",
-    "Station daggara drop cheyyagalaavaa?",
-    "Rate enti? Discount isthaaraa?",
-    "UPI accept chestaavaa?",
-    "Receipt kavali, company expense ki.",
-    "Return policy enti? Fit kaaledu.",
-    "Online lo ekkuva price undi, match cheyyagalaavaa?",
-    "Nijamgaa? Naku teliyadu alaa!",
-    "Chaalaa over ga undi idi.",
-    "Group lo share cheyyi, eppudu miss avutunnaaru.",
-    "Idi correct aa kaaadu ani artham kaaledu.",
-    "Aame attitude today chaalaa off ga undi.",
-    "Gym ki vellataniki maarchaavaa?",
-    "Doctor rest teesukummu annadu.",
-    "Tablet tinnav? Time ki tinaali.",
-    "Neellu ekkuva tagaali, dehydrated ga unnav.",
-    "Nidra poyindaa? Munduga padukkovaali.",
-    "Startup life easy kaadu macchaa.",
-    "Hike adugutaamaa? Appraisal time.",
-    "Work from home lo focus kashtam.",
-    "Presentation ready aa? Feedback cheppu.",
-    "Client side lo problem, fix cheyaali.",
-    "App crash avutundi, review padu.",
-    "Screenshot tesi pathukko.",
-    "Notification off cheyyi, distract avvaaku.",
-    "Spam lo important mail poyindi.",
-    "Update install cheyymani cheppu.",
-    "Bro, chaalaa tired ga unnanu.",
-    "Chaalaa excited ga unnanu, wait cheyyataniki kashtam.",
-    "Joke maatlaadaanu, serious ga teesukokku.",
-    "Honestly, vera maatidi expect chesaanu.",
-    "Technically correct, kaani practically kaadu.",
-    "Tarvata emi chestaav?",
-    "Basically emi problem?",
-    "Obviously cheptaanu, secret ledu.",
-    "Finally ayyindi!",
-    "Choodhu, situation complicated ga undi.",
-    "Nuvvu aa show choosav aa?",
-    "Vere plan undo?",
-    "Raapati maaladaamu. Take care.",
-    "Macchaa, nuvvu genius ra!",
-    "Chaalaa manci idea, proceed avvadam.",
+    "Good morning! Meeru today ela feel avutunnaru?",
+    "I'm doing great, thanks! Meeru ela unnaru?",
+    "Nice to meet you! Meeru ekkadi area lo untaaru?",
+    "Please sit down. Meeru ki emi help cheyyadam?",
+    "See you tomorrow! Have a good evening, take care!",
+    "How long have you been in this city? Settled ga unnaaraa?",
+    "Today weather chaalaa pleasant ga undi — walk ki perfect.",
+    "Sorry, please repeat cheyyi. I didn't understand properly.",
+    "Today Monday, August fifteen — Independence Day!",
+    "Meeting 3:30 PM ki undi — please late avvakaandi.",
+    "My number 9876543210 — WhatsApp lo save cheyyi.",
+    "I was born in 1995 — nearly 30 now, can you believe it?",
+    "Ticket price 450 rupees — concert ki not bad kaadu.",
+    "Deadline Friday evening — fast ga move avvaali.",
+    "Next signal daggara left turn, phir straight ga velli.",
+    "Hospital 2 km dooramga undi — 10 minute walk avuthe.",
+    "Railway station ki route cheppagalaraaa please?",
+    "Airport ki 6 AM ki cherovaali — so tonight purapadadam.",
+    "Idi correct address — please ikkade aapandi driver.",
+    "Price enti? Discount available ga undi?",
+    "UPI lo pay chestanu — PhonePe or GPay, whatever works.",
+    "Smaller size unda? This one is too big for me.",
+    "Receipt ivvandi please — office reimbursement ki.",
+    "Order tomorrow evening deliver avutundi — track chesuko.",
+    "Yesterday night nundi headache and mild fever undi.",
+    "Immediately doctor ni call cheyyi — serious ga undi.",
+    "Nearest pharmacy ekkada undi? Urgent ga medicine kavali.",
+    "Naku penicillin allergy — please prescribe cheyyamundi check cheyyandi.",
+    "Ambulance ki 108 call cheyyi — time waste cheyyadaniki time ledu.",
+    "Internet today super slow ga undi — server down aa?",
+    "Password reset cheyyi please — account lock out ayyindi.",
+    "File WhatsApp or email lo share chestaaraaa?",
+    "Phone battery 3% lo undi — charger unda?",
+    "App Play Store or App Store nundi download cheyyi.",
+    "OTP meeru registered mobile number ki send ayyindi.",
+    "This is genuinely a very good idea — let's go for it!",
+    "Full team tho discuss chesaaka decision teesukuntaamu.",
+    "Honestly, I'm not 100% sure yet — konjam time kavali.",
+    "This movie chaalaa entertaining ga undi — paisa vasool!",
+    "Food here is amazing — definitely marikonchemi raavaali.",
   ],
   TAM: [
-    "Vanakkam, epdi irukkeenga?",
-    "Naan nalla irukkaen, nandri.",
-    "Ungal peyar enna? Enga irundu vareenga?",
-    "Santhippathu makkizhchi. Ullarey vaanga.",
-    "Naalaikki parkiren. Nal maalai.",
-    "Enga vaazhndu varukireengal?",
-    "Indru kaalaigai romba azhagaa irukku.",
-    "Maellam pesunga, puriyalai.",
-    "Innikki thingal, pathinaintu August.",
-    "Kollaigai moondrara kallangi irukku.",
-    "En phone number onbadhu etttu aaru ainju naangu moondu irandu onnu pallu.",
-    "Naan thonnoorrru thonainthaayndu piranthaen.",
-    "Ticket naanoorrru aimbadhu rupaaikku.",
-    "Velli kizhmai maalai pona munnadi submit pananum.",
-    "Munnadi signal-la idathu thirumbi naer sendrum.",
-    "Maruthuvamanaiyam irundu irandu kilo tholaivil irukku.",
-    "Railvaay station-ku vazhiyai solluveerkalaa?",
-    "Aarumanikkul vimaana nilaayam seranganum.",
-    "Idhu correct address, ingae niruthunga.",
-    "Itharkku vilai enna? Thallikkal irukka?",
-    "Naan UPI moolam seluththuvaen.",
-    "Idhae siriya alavil irukkaa?",
-    "Vaangandharkku receipt kudunga.",
-    "Naalaikki maalai therippikkappadum.",
+    "Kaalai vanakkam! Neenga indru epdi feel panreenga?",
+    "Naan nalla irukkaen, nandri! Neenga epdi irukeenga?",
+    "Santhippathu santhosham! Neenga enga irundhu vareenga?",
+    "Vaanga, utkaarunga. Ungalukku enna udavi seyyalaam?",
+    "Naalaikki parkiren. Shubha sandhya, take care!",
+    "Neenga ingae evvalavu naal irukeenga? Settle aagiteengalaa?",
+    "Indru maalai romba azhagaa irukku — walk poga suitaable-aa.",
+    "Maellam sollunga, puriyalai — konjam repeat panneengalaa?",
+    "Indru Thingal, pathinaintu August — Independence Day!",
+    "Sabha maalaigai moondrara kallangi — late aakaatheenga.",
+    "En number onbadhu ettu elu aaru ainju naangu moondu irandu onnu pallu — save panniko.",
+    "Naan thonnoorrru thonainthaayndu piranthaen — ippo karibu mubbathu!",
+    "Ticket naanoorrru aimbadhu rupaaikkku — concert-ku okay-aa.",
+    "Velli kizhmai maalai deadline — vegamaa move aaganum.",
+    "Munnadi signal-la idathu thirumbi, naer sendrum.",
+    "Maruthuvamanaiyam irandu kilo tholaivil irukku — naer nadakkalaam.",
+    "Railway station-ku vazhiyai solluveergalaa?",
+    "Vimaana nilaayam aarumanikkul seranganum — indru iravae purapada porom.",
+    "Idhu correct address — ingey nirkka sollunga driver.",
+    "Vilai enna? Enna thallikkal irukka?",
+    "UPI moolam selluthuvaen — PhonePe or GPay, evadhu sariyaanadu.",
+    "Siriya size irukkaa? Idhu romba perisu.",
+    "Receipt kudunga — office expense claim saathi.",
+    "Naalaikki maalai deliver aaagum — track panniko.",
     "Naetrumuthal thalaivalikkaium meeldhaa kuraintha kaaychalum irukku.",
-    "Maruthuvarை udan azhaiyunga.",
-    "Meel marundhagam enge irukku?",
-    "Enakku penisilin ovvaaamay irukkum.",
-    "Ambulance-ku onnoattru etttu sollunga.",
-    "Indru internet inaippu romba maelamaagaa irukku.",
-    "En kadavoorkolai maeruthavumm seyyunga, marandu vittaen.",
-    "Kolgaiyai WhatsApp-il anuppidunga.",
-    "En phone battery mudiya irukku.",
-    "Play Store-il app irakki vegka sollunga.",
-    "OTP unggal padhivu peyril anuppappattuvirukku.",
-    "Ithu romba nalla yosanai endru ninaikiraen.",
-    "Munnadi team-idan pesanum.",
-    "Ithu pattri ennakku theriyavillai.",
-    "Thisai padham romba viruppamaanadhu.",
-    "Ithu unarvu niraindha paadal.",
-    "Vaazhukai romba azhagaana pathiyal irukku.",
-    "Indru pani vellai thavira veendu mudiyum.",
-    "Avan vazhakam thavira pathil thara maattaan.",
-    "Unga nimmadhikku indha vazhimurayai murigiraen.",
-    "Kannogam katamaippu romba mukkiyam.",
-    "Anaithu avasiya thagavalum tharaappatrukiradhu.",
-    "Ungaludan pesuvadhu makkizhchi.",
-    "Vilaiyaattu murindhathum idhu niraindhathu.",
-    "Maruthuvam paesuveer en nambikkai irukku.",
-    "Soppanaam, naan ippothae pora.",
-    "Pagal nalladhu, thoorngu mudiyadha ennakku.",
-    "Indru sappida enna irukku?",
-    "Kaapiyen mudi seyya vendam.",
-    "Thinai neram varum, padikaavidal, sapdavidal.",
-    "Un vaazhu naan paarvikkiraen.",
-    "Unmai sollu, andha yosanai pidikkum.",
-    "Mudhal tharam mattum parparppom.",
-    "Indru avaluthan naal.",
-    "Semmai, ellaarum koottu vandhirungal.",
-    "Vaazha vazhi thedi naan varuvaen.",
+    "Maruthuvarai turantham azhaiyunga — important.",
+    "Meel marundhagam enge irukku? Urgent-aa medicine venum.",
+    "Enakku penisilin ovvaaamay — prescribe pannum munnadi check pannunga.",
+    "Ambulance saathi onnoattru ettu call pannunga.",
+    "Indru internet romba maelamaagaa irukku — server down-aa?",
+    "En password reset pannunga — account lock aagiduchu.",
+    "File-ai WhatsApp or email-la anuppidunga.",
+    "En phone battery mudiya irukku — charger irukaa?",
+    "Play Store or App Store-il app irakki vegka sollunga.",
+    "OTP unggal registered number-ku anuppappattuvirukku.",
+    "Ithu romba nalla yosanai endru ninaikiraen — let's do this!",
+    "Team-idan ellaarum pesitu decision edukkaanum.",
+    "Ithu pattri ennakku ippodhaikku nischayam illai.",
+    "Thisai padham romba viruppamaanadhu — worth it!",
+    "Ithey saapidu parthaal miga nalla irukku — tiruvaen!",
   ],
   TEL: [
-    "Namaskaram, meeru ela unnaru?",
-    "Nenu baagunnanu, dhanyavaadaalu.",
-    "Meeru peru emiti? Ekkadi nundi vastunnaru?",
-    "Kalavadam saantosham. Lopi raandi.",
-    "Raapati kalustaanu. Subha saayantramu.",
-    "Meeru ekkada nundi vachaarindi?",
-    "Indu udayam chaalaa aahlaadakaragaa undi.",
-    "Meellaga maatlaadandi, artham kaaledhu.",
-    "Indu somavaaram, pannendu August.",
-    "Saayantram moondu mupta.",
-    "Na phone number thoammidi enimidi aaru aidu naalugu moondu rendu okati sunna.",
-    "Nenu thonnoorru anandaru puttaanu.",
-    "Ticket naalavoi yaabhadi rupaayalu.",
-    "Shukravaaraniki submit cheyaali.",
+    "Shubhodayam! Meeru indu ela feel avutunnaru?",
+    "Nenu baagunnanu, dhanyavaadaalu! Meeru ela unnaru?",
+    "Kalavadam saantosham! Meeru ekkadi area lo untaaru?",
+    "Raandi, koorchovaandi. Meeru ki emi help cheyyadam?",
+    "Raapati kalustaanu. Subha saayantramu, take care!",
+    "Meeru ee city lo enni rojulu unnaru? Settle ayyaaraa?",
+    "Indu weather chaalaa aahlaadakaragaa undi — walk ki perfect.",
+    "Sorry, meellaga maatlaadandi — artham kaaledu.",
+    "Indu somavaaram, pannendu August — Independence Day!",
+    "Saayantram moondu mupta ki meeting undi — late avvakaandi.",
+    "Na number thoammidi enimidi aaru aidu naalugu moondu rendu okati sunna — save cheyyi.",
+    "Nenu thonnoorru anandaru puttaanu — nearly 30 ippudu!",
+    "Ticket naalavoi yaabhadi rupaayalu — concert ki괜 괜찮아 괜찮아.",
+    "Shukravaaraniki deadline — tavaraga move avvaali.",
     "Mundu signal daggara edamakki tirugi naeru pampandi.",
-    "Aaspathri eerendu kilomeettarlu dooramga undi.",
+    "Aaspathri eerendu kilomeettarlu dooramga undi — nadustu velladam.",
     "Railway station ki daari cheppagalaraaa?",
-    "Aarugantallopu vimanaasrayam cherovaali.",
-    "Idi correct address, ikkade aapandi.",
+    "Aarugantallopu vimanaasrayam cherovaali — eevaraatrey purapadadam.",
+    "Idi correct address — ikkade aapandi driver.",
     "Idi entha? Discount undi?",
-    "Nenu UPI dwaaraa chellisataanu.",
-    "Idi chinna size lo undaa?",
-    "Konnanduku receipt ivvandi.",
-    "Raatre delivery vastundi.",
+    "UPI dwaaraa chellisataanu — PhonePe or GPay, edhaina.",
+    "Idi chinna size lo undaa? Idi naaku pedda ga undi.",
+    "Receipt ivvandi — office reimbursement ki.",
+    "Raatre delivery vastundi — track chesuko.",
     "Netimutu nundi talavyatha mariyu chali jvaram undi.",
-    "Vaaram gaa vaidyuni pilavandi.",
-    "Samipaana medical shop ekkada undi?",
-    "Naku penicillin paniki raadu.",
-    "Ambulance kosam noori etttu call cheyyandi.",
-    "Indu internet connection chaalaa meelaga undi.",
-    "Na password reset cheyyandi, marchipooyaanu.",
-    "File ni WhatsApp lo pampaandi.",
-    "Na phone battery aipothundi.",
-    "Play Store nundi app download cheyyandi.",
+    "Turatugaa vaidyuni pilavandi — important.",
+    "Samipaana medical shop ekkada undi? Urgent ga medicine kavali.",
+    "Naku penicillin allergy — prescribe cheyyamundi check cheyyandi.",
+    "Ambulance kosam noori ettu call cheyyandi.",
+    "Indu internet connection chaalaa meelaga undi — server down aa?",
+    "Na password reset cheyyandi — account lock out ayyindi.",
+    "File ni WhatsApp or email lo pampaandi.",
+    "Na phone battery aipothundi — charger unda?",
+    "Play Store or App Store nundi app download cheyyandi.",
     "OTP meeru register chesina number ki pampaabaddindi.",
-    "Idi chaalaa manchii aalochaana ani nenu anukuntunnaanu.",
-    "Mottham team tho charchinchaalike praathamikatha ivvaali.",
-    "Naku ee nirnayam gurinchi nishchitam ledu.",
-    "Ee cinema chaalaa anandangaa undi.",
-    "Illu annividhaalaa adbhutam.",
-    "Nenu ippudake vastaanu, kochindi pampesaanu.",
-    "Paata padyam artham naku teliyaledu.",
-    "Aa vishayam gurinchi nenu chadivaanu.",
-    "Idi meeru adige mudda kaadu.",
-    "Manchanipaina padukoni vishraamtinchaali.",
-    "Jeevitam lo saavalalatonu nerpukuntaamu.",
-    "Ee kaaryakramaniki paalpaddinduku saantosham.",
-    "Pindi ruchigaa undi, marikonchemi isthaaraa?",
-    "Nadavadam nadapadam ki manchidi.",
-    "Edi chestunnaaroo cheppaali.",
-    "Maa ooru nilavaari vana.",
-    "Aa pani cheyyadam kastam kaadu.",
-    "Pedda aduganavutu chinnadi cheppindi.",
-    "Sagam pani ayyindi, migata raapati.",
-    "Nuvvu rastunna kadha gurtu undi.",
-    "Gurinchi matlaadite manchidi.",
-    "Ee roju panulu chaalaa unnaayi.",
-    "Anni pakkaala choosukunnam.",
-    "Rendu jeellu tarvata ayipothundi.",
-    "Manchiga alochinchi, tarvata cheppu.",
+    "Idi chaalaa manchii aalochaana — let's go for it!",
+    "Mottham team tho charchinchaalike decision teesukuntaamu.",
+    "Naku ippudu idi gurinchi nishchitam ledu — konjam time kavali.",
+    "Ee cinema chaalaa anandangaa undi — worth it!",
+    "Ikkade thinavadam baaguntundi — definitely marikonchemi raavaali.",
   ],
   ODI: [
-    "Namaskar, aapanku kemiti achhi?",
-    "Mun bhala achhi, dhanyabada.",
-    "Aapanka naama kana? Aapana kaahaaku aasichanti?",
-    "Aapanaanka saathita saahasijibaa.",
-    "Aagaami kaliku aasibaa. Subha sandya.",
-    "Aapana kebe thu ithare rahuchanti?",
-    "Aaji skaala maathaa khub sundara.",
-    "Krupayaa dheere bolanti, bujhibaa naahi.",
-    "Aaji somabaara, pandara tarikha August.",
-    "Sabha maathaa tini ghantare.",
-    "Mora phone number naa aathu chha paancha chhaara teen dui eka shunya.",
-    "Mun unnabbya panchabhinsha janmithili.",
-    "Ticket chaarashaa panchashi taka.",
-    "Shukrabaara sandhyaa bhitare jama karibaaku hobaa.",
+    "Namaskar! Aapan aaji kemiti feel koruchanti?",
+    "Mun bhala achhi, dhanyabada! Aapan kemiti achhan?",
+    "Bhetibaaku khushi lagila! Aapan etha ku aasichanti?",
+    "Basintu. Aapanku kana help karibaaku paaribu?",
+    "Aagaami kaliku kaluhebi. Subha sandya, take care!",
+    "Aapan ei sahara-re kete dina rahu achhan? Settle heichanti ki?",
+    "Aaji aakasha khub sundara laguchhi — baahare jalibaa uchita.",
+    "Maaph karanti, aau tike bolanti — bujhibaa naahi.",
+    "Aaji somabaara, pandara August — Independence Day!",
+    "Sabha sandhya tini ghantaare — please late hoi naaibaa.",
+    "Mora number naa aathu chha paancha chhaara teen dui eka shunya — save karanti.",
+    "Mun unnabbya panchabhinsha janmithili — karibu trishaa heba!",
+    "Tiket chaarashaa panchashi taka — concert paaiin theek achi.",
+    "Shukrabaara sandhyaa deadline — taratari aagibaa darkaar.",
     "Agaa signal re baam paakhe ghuri sidha jaaanti.",
-    "Aspatri ethaaru dui kilometer dure achi.",
+    "Aspatri ethaaru dui kilometer dure achi — hata chalibaa jaayibaa.",
     "Railway station jaibaa rasta bataaibeni?",
-    "Chhata ghantaa bhitare bimaana bandara pahuchibaaku hobaa.",
-    "Ehi thik thikaanaa, ethre ruhanti.",
-    "Ehi daam kana? Chhaar achi ki?",
-    "Mun UPI re deba.",
-    "Ehi chhota saajaa re miliba ki?",
-    "Kinibaa paain receipt dianti.",
-    "Kaaliku sandhyaa bhitare pahuchiba.",
+    "Chhata ghantaa sudhika vimaana bandara pahuchibaaku hobaa — aaji raate yaatri.",
+    "Ehi thik thikaanaa — ethre gaarikhu rokanti.",
+    "Ehi daam kana? Kichhi chhaar achi ki?",
+    "Mun UPI re deba — PhonePe or GPay, jetiki subidhaa.",
+    "Ehi chhota saajaa re miliba ki? Ehi bahut bada.",
+    "Receipt dianti — office kharcha claim paaiin.",
+    "Kaaliku sandhyaa bhitare pahuchiba — track karanti.",
     "Kaal thu mathaa byatha aau mandar jara achi.",
-    "Daktar ku taratari daakanti.",
-    "Najadiaa medical dukaan kau thika achi?",
-    "Mora penicillin te alerji achi.",
-    "Ambulance paain ek osha aaath phone karanti.",
-    "Aaji internet connection khub dheere achi.",
-    "Mora password phiraaanti, bhuliyaaichi.",
-    "File ku WhatsApp re pathaaanti.",
-    "Mora phone battery shesh haeba.",
-    "Play Store ru app download karanti.",
+    "Taratari doctor ku daakanti — important.",
+    "Najadiaa medical dukaan kau thika achi? Urgent-ru medicine darkar.",
+    "Mora penicillin te alerji — prescribe kariba agaru check karanti.",
+    "Ambulance paaiin ek osha aaath call karanti.",
+    "Aaji internet khub dheere achi — server down ki?",
+    "Mora password phiraaanti — account lock heijaichi.",
+    "File ku WhatsApp or email-re pathaaanti.",
+    "Mora phone battery shesh haeba — charger achi ki?",
+    "Play Store or App Store ru app download karanti.",
     "OTP aapanka registered number ku pathaaijichi.",
-    "Mun bhaabanchi ehi khub bhala alochanaa.",
-    "Aagu team saathire aalochana karaa uchita.",
-    "Mun ehi nirnaya sambandhe nishchita naahi.",
-    "Ehi chalachitra khub manoranjak thila.",
-    "Ghara shabhu dikku sundar achi.",
-    "Mun ebehi asuchhi, dakhina pathaaijichi.",
-    "Puruna geet mote bujha naahi.",
-    "Sei bishaya mun padhibi.",
-    "Ehi aapanka prashna naahi.",
-    "Bishrama niyanti shuyibaa uchita.",
-    "Jeebanare kashtaru shikhibaa.",
-    "Ehi anusthaanare bhaaga neibaa aananda.",
-    "Khaaibaa khub swaadishtha, aaruu kichhi deanti ki?",
-    "Chalibaa swastha paain bhala.",
-    "Kaun kaam karuchhi bataaibaa uchita.",
-    "Aamara gaanra natun khabar.",
-    "Sei kaam karaa kathin naahi.",
-    "Boro prashna kari chhota kathaa kahilaa.",
-    "Aadha kaam shesh, baaki kaaliku.",
-    "Tume likhuchha kahani mone achi.",
-    "Sei bishayare kathaa kahibaa bhala.",
-    "Aaji bahuta kaam thilaa.",
-    "Sabhu diku bicharaa kariluu.",
-    "Dui sapta parei shesh haijiba.",
-    "Bhala bhaabanchi, parei kahu.",
+    "Ehi khub bhala aalochana — let's go for it!",
+    "Sabu team-u saathire aalochana kari nirnaya nibaa.",
+    "Mun ehi bisayare ebe nishchita naahi — kichu samaya lagiba.",
+    "Ehi chalachitra khub manoranjak — worth it!",
+    "Ehi khaibaa khub bhala lagila — aau aasiba.",
+  ],
+  MAR: [
+    "Subha prabhat! Tumi aaj kasa/kashi feel kartay?",
+    "Mi changla/changli aahe, dhanyavaad! Tumi kase aahat?",
+    "Bhetatana aanand zala! Tumi kuthe aahaat?",
+    "Basal. Tumhala kashi madad karu?",
+    "Udya bhetuyaa. Shubha sandhyaakal, take care!",
+    "Tumi ya shaharat kiti divas rahata? Settle zaalaat kaa?",
+    "Aaj havashu khup sundar aahe — baaheyar jaayala perfect.",
+    "Maf kara, aadhi ek wela saanga — kalalay naahi.",
+    "Aaj Somvaar aahe, pandhar August — Independence Day!",
+    "Sabha sayankaali teen vaajta — please ushira yeu naka.",
+    "Maza number nau aath saat saha paanch chaar teen don ek shunya — save kara.",
+    "Mee panchananavda varshi janmalo — ata karibu tees!",
+    "Ticket chaarshey panchvis rupaye — concert la okay.",
+    "Shukravaar sandhyakaali deadline — lavkar kaam karayala havy.",
+    "Pudhacha signal la davi varun seedha chala.",
+    "Rugnalay dohn kilometre door aahe — chalat jaata yeil.",
+    "Railway station la rasta saangacha ka?",
+    "Saha vajeparyant vimantal pohoche — toh rat nighaayacha.",
+    "Haa barobar pattaa aahe — ithech thamba driver.",
+    "Hyachi kimat kaay? Soot aahey kaa?",
+    "UPI ne bhugtaan karto — PhonePe or GPay, jo chaalel to.",
+    "Laahan size aahe kaa? Haa khup motha aahe.",
+    "Paatvati dyaa — office expense saathi.",
+    "Udyaa sandhyaakaali deliver hoyel — track kara.",
+    "Kaalaapasoon dokedukhee ani taap aahe.",
+    "Doctor la laaglit bolva — important aahe.",
+    "Javalchi medicalchi dukaan kuthi aahe? Urgent-la medicine havy.",
+    "Mala penicillin chi allerji aahe — prescribe karayla agodhi check kara.",
+    "Ambulance saathi ek shunya aath la phone kara.",
+    "Aaj internet khoop slow aahe — server down kaa?",
+    "Maza password reset kara — account lock zaala.",
+    "File WhatsApp or email var pathva.",
+    "Mazya phone chi battery sampat aahe — charger aahe kaa?",
+    "Play Store or App Store madhun app download kara.",
+    "OTP tumchya registered number var pathvala.",
+    "Hi khup changli kalpana aahe — let's go for it!",
+    "Saglya team shee bolun mag nirnay gheu.",
+    "Mala yaabaddal ata nishchit naahi — thoda vel lagel.",
+    "Ha chitrapat khup majadar hota — worth it!",
+    "Ithle jevan khup changlaa aahe — paratnaar yeen.",
+  ],
+  GUJ: [
+    "Shubh sakal! Tame aaj kem feel karo chho?",
+    "Hoon saaro/saari chhun, dhanyavaad! Tame kem chho?",
+    "Malinne aanand thayo! Tame kyaanthi aavyo chho?",
+    "Baeso. Tamane shu help kari shakun?",
+    "Kaaley malanshun. Shubh saanj, take care!",
+    "Tame aa shahermaa ketlaa samay thi chho? Settled chho?",
+    "Aaj havashu khub sarun laage chhe — bahar jaava perfect.",
+    "Maaf karsho, pheri bolsho — samjaayu nahin.",
+    "Aaj Somvaar chhe, pandharmi August — Independence Day!",
+    "Meeting saanje tran vaagey — please modu na aavtaa.",
+    "Maro number nav aath saat chha panch chaar tran be ek shoonya — save karo.",
+    "Hoon pannnav varshe janamyo/janamya — hve lagbhag tris!",
+    "Tikit chaarsho panchar rupiyaa — concert maate theek chhe.",
+    "Shukravaare saanje deadline — jaldhi kaam karvu padse.",
+    "Agala signal par daabi baaju vali ne sidha jao.",
+    "Davaakhanu be kilomitar door chhe — chalto javashe.",
+    "Railway station no raasto bataavsho?",
+    "Chha vaagya sudhimaan vimaan mandal pahonchavu padhe — aaj raate niklavanu.",
+    "Aa sahi thikaanu chhe — yahaan aatka o driver.",
+    "Aanu kev laage chhe? Batta malshe?",
+    "UPI thi bharish — PhonePe or GPay, je chalse.",
+    "Naanu saiz chhe? Aa khub motu chhe.",
+    "Rasid aapo — office kharcha maate.",
+    "Kaaley saanje pahonche se — track karo.",
+    "Kaal thi mathun dard ne halki taav chhe.",
+    "Turant doctor ne bolao — important chhe.",
+    "Naajikni medical dukaan kyaa chhe? Urgent ma medicine joie.",
+    "Mane penicillinni allergy chhe — prescribe karvaani pahela check karo.",
+    "Ambulance maate ek shoonya aath call karo.",
+    "Aaj internet khub dheeru chhe — server down chhe?",
+    "Maro password reset karo — account lock thai gayo.",
+    "File WhatsApp or email par moklao.",
+    "Mara phone ni battery puri thavani chhe — charger chhe?",
+    "Play Store or App Store thi app download karo.",
+    "OTP tamara registered number par moklayo.",
+    "Aa khub saari vichaarna chhe — let's go for it!",
+    "Badha team sathe vaat kari pachhi nirnay laishu.",
+    "Mane aa baabat aanithi khaatri nathi — thodu time lagse.",
+    "Aa film khub majani hati — worth it!",
+    "Ahiyanu khavaanu sauthi sarun chhe — pharthi aaavish.",
   ],
 };
 
-// ══════════════════════════════════════════════════════════════════════════
-//  STATE
-// ══════════════════════════════════════════════════════════════════════════
-let state = {
-  speakerId: '',
-  lang: '',
-  sentenceIndex: 0,
-  mediaRecorder: null,
-  audioChunks: [],
-  audioBlob: null,
-  audioUrl: null,
-  audioEl: null,
-  isRecording: false,
-  timerInterval: null,
-  timerSeconds: 0,
-  animFrameId: null,
-  analyser: null,
-  audioCtx: null,
-  submitted: {},   // { sentenceIndex: true }
-  sessionLog: [],
+// ═══════════════════════════════════════════
+//  LANGUAGE-SPECIFIC — 30 sentences each
+//  Code-mix languages: EVERY line has English
+// ═══════════════════════════════════════════
+const SPECIFIC = {
+  HGL: [
+    "Yaar, today office mein itna zyaada workload tha, completely burnt out hoon.",
+    "Meeting suddenly cancel ho gayi — now free hoon toh kuch plan karte hain?",
+    "Kya scene hai? Kuch interesting plan hai this weekend?",
+    "Bhai, ek chota sa favour chahiye tha — thoda time hai kya?",
+    "Kal hard deadline hai, so tonight late night grind karna padega.",
+    "Maine already usse WhatsApp message kar diya hai — waiting for reply.",
+    "That project is still pending — koi proper update nahi aaya abhi tak.",
+    "Boss ne finally approve kar diya! Such a relief, yaar.",
+    "Tension mat le — everything will work out, trust me.",
+    "Thoda wait karo, main just 5 minute mein aata/aati hoon.",
+    "Aaj lunch mein kya khaya? Ghar ka tha ya outside food order kiya?",
+    "Chai bana de yaar — seriously, so much screen time today, need a break.",
+    "Woh dahi wada was absolutely amazing — totally recommend karta/karti hoon.",
+    "Bhaiyya, ek plate pav bhaji please, and extra butter on top.",
+    "Mujhe diet pe rehna chahiye, but whenever I see samosa, willpower khatam.",
+    "Kya auto milega is time pe? Usually tough in peak hours.",
+    "Uber surge pricing dekh ke mood kharab ho gaya — zyaada lag raha hai.",
+    "Bhai, stuck hoon traffic mein — around 20 minute late hoga, sorry!",
+    "Metro pakad lo — much faster than cab in this rush hour.",
+    "Startup life is real hard, bhai — but honestly worth it.",
+    "Appraisal mein kya hua? Koi good hike mili kya this time?",
+    "Remote work mein focus karna really mushkil hota hai sometimes.",
+    "Presentation almost ready hai — can you please give me some quick feedback?",
+    "Client is not happy — we need to figure out a jugaad fast.",
+    "App crash ho raha hai again — zaroor koi bug hai, review karna padega.",
+    "Quickly screenshot le aur mujhe WhatsApp pe bhej de.",
+    "Yaar, bahut thak gaya/gayi hoon these days — need a proper break.",
+    "Seriously? Mujhe toh bilkul pata hi nahi tha — that's shocking!",
+    "Honestly, mujhe kuch aur expect tha — slightly disappointing.",
+    "Finally yeh project khatam hua! Let's celebrate, seriously.",
+  ],
+  TGL: [
+    "Yaar, today office-la workload romba over-aa irundhuchu — completely tired.",
+    "Meeting suddenly cancel aaguchi — now free, so let's plan something?",
+    "Enna scene? This weekend-ku enna interesting plan iruku?",
+    "Bhai, oru chinna favour venum — thoda time irukaa?",
+    "Kal hard deadline — so tonight late night grind pannanum.",
+    "Already WhatsApp-la message panni vitaen — waiting for reply.",
+    "That project still pending-aa iruku — no proper update.",
+    "Boss finally approve pannitta! Such a relief, machaan.",
+    "Tension padaadhey — everything will work out, trust me.",
+    "Thoda wait panni — I'll be back in just 5 minutes.",
+    "Today lunch-la enna saapittay? Home food-aa or outside order-aa?",
+    "Yaar, chai vaangindu vaa — screen time romba over-aa iruku today.",
+    "Adha dahi wada was absolutely amazing — definitely recommend pannuvaen.",
+    "Bhaiyya, oru plate pav bhaji please, extra butter on top.",
+    "Diet-la irukkaen but whenever I see samosa, willpower gone.",
+    "Auto kittumaa this time? Usually peak hours-la romba tough.",
+    "Uber surge pricing paarunga — mood kharab aagichi, too much.",
+    "Bhai, traffic-la stuck — around 20 minutes late, sorry!",
+    "Metro pakko — much faster than cab in this rush hour.",
+    "Startup life really hard, machaan — but honestly worth it.",
+    "Appraisal-la enna aaguchi? Any good hike kittuchaa this time?",
+    "Remote work-la focus panna really difficult sometimes.",
+    "Presentation almost ready — quick feedback kuduveengalaa please?",
+    "Client happy illai — we need to figure out a solution fast.",
+    "App again crash aaguthu — surely oru bug iruku, review pannanum.",
+    "Quick-aa screenshot eduthu WhatsApp-la share pannuveengalaa?",
+    "Yaar, romba tired-aa iruku these days — need a proper break.",
+    "Seriously? Enakku bilkul theriyave theriyaadhu — that's shocking!",
+    "Honestly, I expected something better — slightly disappointing.",
+    "Finally this project done! Let's celebrate, seriously.",
+  ],
+  TLG: [
+    "Yaar, today office lo workload chaalaa ekkuva ga undi — completely tired.",
+    "Meeting suddenly cancel ayyindi — now free, so let's plan something?",
+    "Enti scene? This weekend ki emi interesting plan undi?",
+    "Bhai, oka chinna favour kavali — thoda time unda?",
+    "Kaaley hard deadline — so tonight late night grind cheyaali.",
+    "Already WhatsApp lo message chesi unna — waiting for reply.",
+    "That project still pending ga undi — no proper update.",
+    "Boss finally approve chesaadu! Such a relief, macchaa.",
+    "Tension padakaandi — everything will work out, trust me.",
+    "Thoda wait cheyyi — I'll be back in just 5 minutes.",
+    "Today lunch lo emi tinnav? Home food aa or outside order aa?",
+    "Yaar, chai teesuko raa — screen time chaalaa ekkuva undi today.",
+    "Aa dahi vada absolutely amazing ga undi — definitely recommend chestanu.",
+    "Bhaiyya, oka plate pav bhaji please, extra butter on top.",
+    "Diet lo unna but whenever I see samosa, willpower gone.",
+    "Auto dorkutundaa this time? Usually peak hours lo chaalaa tough.",
+    "Uber surge pricing choosi mood kharab ayyindi — too much.",
+    "Bhai, traffic lo stuck — around 20 minutes late, sorry!",
+    "Metro pakado — much faster than cab in this rush hour.",
+    "Startup life really hard, macchaa — but honestly worth it.",
+    "Appraisal lo emi ayyindi? Any good hike dorikinaadaa this time?",
+    "Remote work lo focus cheyyadam really difficult sometimes.",
+    "Presentation almost ready — quick feedback isthaaraaa please?",
+    "Client happy kaadu — we need to figure out a solution fast.",
+    "App again crash avutundi — surely oka bug undi, review cheyaali.",
+    "Quick ga screenshot tesi WhatsApp lo share chestaaraaa?",
+    "Yaar, chaalaa tired ga unnanu these days — need a proper break.",
+    "Seriously? Naku bilkul teliyadu — that's shocking!",
+    "Honestly, I expected something better — slightly disappointing.",
+    "Finally this project done! Let's celebrate, seriously.",
+  ],
+  TAM: [
+    "Yaar, indru office-la workload romba over — ekkadum tired.",
+    "Meeting suddenly cancel — innikki free, so enna plan panlaam?",
+    "Enna scene? This weekend enna interesting plan irukku?",
+    "Oru chinna help venum — thoda time irukaa?",
+    "Naalaikku deadline — so indru iravil late-aa work pannanum.",
+    "Already message panni vitaen — reply-ku katturukkaen.",
+    "Adha project still pending — enna update-um illai.",
+    "Boss finally approve pannitta — romba relief-aa iruku.",
+    "Tension padaadhey — everything will work out.",
+    "Konjam wait pannunga — ainju minute-la varuvaen.",
+    "Indru lunch-la enna saapittay? Veettu saapaadudhaan, illaya order-aa?",
+    "Yaar, oru coffee kudunga — screen time romba ekkuva aaguchi.",
+    "Adha dahi vada romba nalla irundhuchu — try panningalaa?",
+    "Bhaiyya, oru plate pav bhaji, extra butter.",
+    "Diet-la irukkanum nu ninaikiraen — but samosa paarunga ullam tholaikkiradhu.",
+    "Auto kittumaa? Peak hour-la romba kashtam.",
+    "Cab surge price paarunga — mood seriousaa off aagichi.",
+    "Traffic-la irukkaen — around 20 minute late aavuvaen.",
+    "Metro padham edrukkaanum — rush hour-la cab-ai vida vegam.",
+    "Startup life romba kashtam — but worth it endru ninaikiraen.",
+    "Appraisal-la enna aayirundhadhu? Hike kittuchaaa?",
+    "Work from home-la focus panna romba kashtamaana neram.",
+    "Presentation ready — konjam feedback solluveengalaa?",
+    "Client-ku thrupti illai — solution vegamaa kaananum.",
+    "App again crash — bug irukku, review pannanum.",
+    "Screenshot edrundhu share pannunga.",
+    "These days romba tired-aa irukku — oru break venum.",
+    "Seriously? Enakku theriyave theriyaadhu — shocking!",
+    "Honestly, vera mathiri expect pannen.",
+    "Finally project mudindhuchu — celebrate pannalaamaa?",
+  ],
+  TEL: [
+    "Yaar, indu office lo workload chaalaa ekkuva — completely tired.",
+    "Meeting cancel ayyindi — indu free, so emi plan chestamu?",
+    "Enti scene? Ee weekend ki emi interesting plan undi?",
+    "Oka chinna help kavali — thoda time unda?",
+    "Kaaley deadline — so tonight late ga work cheyaali.",
+    "Already message chesaanu — reply kosam chustunna.",
+    "Aa project still pending — update em raaledu.",
+    "Boss finally approve chesaadu — chaalaa relief ga undi.",
+    "Tension padakaandi — everything will work out.",
+    "Konjam wait cheyyi — aidu nimeeshallo vasthanu.",
+    "Indu lunch lo emi tinnav? Inti saapadu aa or order aa?",
+    "Yaar, oka coffee ivvu — screen time chaalaa ekkuva ayyindi.",
+    "Aa dahi vada chaalaa baagundi — try chesaavaa?",
+    "Bhaiyya, oka plate pav bhaji, extra butter.",
+    "Diet lo undaali anipistundi — but samosa chuste willpower poyi.",
+    "Auto dorukutundaa? Peak hour lo chaalaa kashtam.",
+    "Cab surge price choosi mood kharab ayyindi.",
+    "Traffic lo unna — around 20 nimeeshallo late avutanu.",
+    "Metro ekkavadam better — rush hour lo cab kante vegamga.",
+    "Startup life chaalaa kashtam — but worth it anipistundi.",
+    "Appraisal lo emi ayyindi? Hike dorikinaadaa?",
+    "Work from home lo focus kashtamga avutundi sometimes.",
+    "Presentation ready — konjam feedback isthaaraaa?",
+    "Client happy kaadu — tavaraaga solution kaanali.",
+    "App again crash — bug undi, review cheyaali.",
+    "Screenshot tesi share cheyyi.",
+    "Ee rojulu chaalaa tired ga unnanu — break kavali.",
+    "Seriously? Naku telisee teliyadu — shocking!",
+    "Honestly, vera reetiga expect chesaanu.",
+    "Finally project ayyindi — celebrate chestaamaa?",
+  ],
+  ODI: [
+    "Yaar, aaji office-re workload bahuta — ekkadum tired.",
+    "Meeting cancel heigala — aaji free, kana plan kariba?",
+    "Kana scene? Ei weekend-re kana interesting plan achi?",
+    "Eka chota help darkaar — thoda time achi ki?",
+    "Kaali deadline — tote aaji raate late-ru kaam karibaa.",
+    "Aage message karichi — reply paaiin apekhya.",
+    "Sei project ebe pending — kichhi update naahi.",
+    "Boss finally approve karidele — bahuta relief.",
+    "Chintaa nakaranti — sab theek haijiba.",
+    "Konjam wait karanti — paanch minute-re aasiba.",
+    "Aaji lunch-re kana khaile? Ghara khaibaa ki order?",
+    "Yaar, eka cup coffee diyanti — screen time bahuta aagichi.",
+    "Sei dahi vada khub bhala lagila — try karichanti?",
+    "Bhaiyya, eka plate pav bhaji, extra butter.",
+    "Diet-re thibaa uchita — but samosa dekhile ichha jaai.",
+    "Auto miliba ki? Peak time-re bahuta kashtaa.",
+    "Cab surge price dekhilu — mood kharab heigala.",
+    "Traffic-re achhi — around 20 minute late haijiba.",
+    "Metro uchita — rush hour-re cab tharu dheera.",
+    "Startup life bahuta kashtaa — but worth it.",
+    "Appraisal-re kana haila? Kichhi hike milila ki?",
+    "Work from home-re focus karibaa kashtaa sometimes.",
+    "Presentation ready — feedback deibentu ki?",
+    "Client khushi naahi — taratari solution kahibaa.",
+    "App aagu crash heuchhi — bug achi, review karibaa.",
+    "Screenshot nii share karanti.",
+    "Ei dina bahuta tired laaguchhi — break darkaar.",
+    "Seriously? Mote bujha naahi — shocking!",
+    "Honestly, anya mathiri apekhyaa thilaa.",
+    "Finally project shesh! Celebrate kariba ki?",
+  ],
+  MAR: [
+    "Yaar, aaj office-mdhye workload khup zyaada hote — completely tired.",
+    "Meeting cancel zaali — aaj free aahe, kahi plan karuyaat?",
+    "Kasa chal aahe? This weekend kahi interesting plan aahe?",
+    "Bhai, ek chhoti madad havy hoti — thoda time aahe kaa?",
+    "Udyaa deadline aahe — so aaj raatri grind karaychay.",
+    "Aadheech WhatsApp message karun taaklay — reply-chi vaat aahey.",
+    "To project abe pending aahe — kahi proper update nahi.",
+    "Boss ne finally approve kela! Khup baro waatlay.",
+    "Tension nako gheu — sab hoyil, trust me.",
+    "Thoda wait kara — mi pach minute mdhye yeto/yete.",
+    "Aaj lunch-mdhye kaay khaalay? Gharcha hote ka order kela?",
+    "Yaar, chai kara — screen time khup zaali aaj.",
+    "To dahi vada khup mast hota — try karayla hava.",
+    "Bhaiyya, ek plate vada pav please, extra butter.",
+    "Diet-la aahe pan samosa dikhla ki willpower jaato.",
+    "Auto milel kaa ya veli? Peak time-la khup kashtaachay.",
+    "Cab surge price baghun mood kharab zaala.",
+    "Bhai, traffic-mdhye aadkalo — around 20 minute late hoyil.",
+    "Metro pakad — rush hour-mdhye cab peksha jaast fast.",
+    "Startup life khup kashtaachay — pan worth it aahe.",
+    "Appraisal-mdhye kaay zaala? Kahi hike mili kaa?",
+    "Work from home-mdhye focus karayla really kashtaachay.",
+    "Presentation ready aahe — quick feedback denar kaa?",
+    "Client khush naahi — lavrach solution kadhaycha.",
+    "App parat crash hotay — bug aahe, review karaychay.",
+    "Screenshot ghya ani mala share kara.",
+    "Yaar, these days khup tired aahe — break havy aahe.",
+    "Seriously? Mala aajibat mahit navhata — shocking!",
+    "Honestly, mala vegali expectation hoti.",
+    "Finally project khatam zaala! Celebrate karyaat kaa?",
+  ],
+  GUJ: [
+    "Yaar, aaj office maa workload bahuj vadhare haatu — completely tired.",
+    "Meeting cancel thai gai — aaj free chhu, koi plan kariye?",
+    "Su chhey? Aa weekend ma koi interesting plan chhe?",
+    "Bhai, ek nani madad joiti hati — thodu time chhe?",
+    "Kaaley deadline chhe — so aaj raat grind karvu padse.",
+    "Pahela j WhatsApp message kari didhu chhe — reply ni rajoo chhu.",
+    "Te project have pending chhe — koi proper update nahin.",
+    "Boss e finally approve kariu! Bahuj relief thai.",
+    "Tension na le — badhu sari rite thai jashe, trust me.",
+    "Thodu wait karo — panch minute maa aavun chhun.",
+    "Aaj lunch maa shu khaadhu? Ghar nu haatu ke order karavyu?",
+    "Yaar, chai banav — aaj screen time bahuj vadhi gai chhe.",
+    "Te dahi vada ekdam jabardast haatu — try karo.",
+    "Bhaiyya, ek plate pav bhaji please, extra butter.",
+    "Diet par chhu pan samosa joi ne willpower jaay chhe.",
+    "Aa time e auto maalshe? Peak hour maa bahuj tough.",
+    "Cab surge price joi ne mood kharab thai gayo.",
+    "Bhai, traffic maa fasaayo — around 20 minute late thaishu.",
+    "Metro lo — rush hour maa cab karta vadhare fast.",
+    "Startup life bahuj kashthu chhe — pan worth it chhe.",
+    "Appraisal maa shu thayun? Koi hike malyo chhe?",
+    "Work from home maa focus karvu really mushkel chhe.",
+    "Presentation ready chhe — quick feedback aapsho?",
+    "Client khush nathi — jaldhi solution shodhvu padse.",
+    "App pheri crash thai — bug chhe, review karvu padse.",
+    "Screenshot lo ane share karo.",
+    "Yaar, aajkal bahuj tired chhu — break joie chhe.",
+    "Seriously? Mane bilkul khabar nahin hati — shocking!",
+    "Honestly, mane alag rite expect karavyu haatu.",
+    "Finally project puru thayun! Celebrate kariye?",
+  ],
 };
 
-// ══════════════════════════════════════════════════════════════════════════
-//  SENTENCES LOGIC
-// ══════════════════════════════════════════════════════════════════════════
-function getSentences() {
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+let state = {
+  mobile:'', lang:'', idx:0,
+  mediaRecorder:null, chunks:[], blob:null, url:null, audio:null,
+  isRec:false, timerSec:0, timerInt:null, animId:null, analyser:null, actx:null,
+  submitted:{}, takes:{}, log:[],
+};
+
+// ═══════════════════════════════════════════
+//  SENTENCE HELPERS
+//  Index 0 = consent, 1-40 = core, 41-70 = specific
+// ═══════════════════════════════════════════
+function getAll() {
   const lang = document.getElementById('langSelect').value;
-  if (!lang || !LANG_SPECIFIC[lang]) return [];
-  return [...COMMON_CORE, ...LANG_SPECIFIC[lang]];
+  if (!lang || !CORE[lang]) return [];
+  return [CONSENT[lang], ...CORE[lang], ...SPECIFIC[lang]];
 }
+function getCurrent() { return getAll()[state.idx] || ''; }
+function getSID()     { return String(state.idx).padStart(3,'0'); }  // 000=consent,001-040=core,041-070=specific
+function getTotal()   { return getAll().length || 71; }
+function getTake()    { return state.takes[state.idx] || 0; }
 
-function getCurrentSentence() {
-  return getSentences()[state.sentenceIndex] || '';
-}
-
-function getSentenceId() {
-  return String(state.sentenceIndex + 1).padStart(3, '0');
-}
-
-function getFileName(take = 'T1') {
-  const sid = state.speakerId.toUpperCase().replace(/[^A-Z0-9]/g,'');
+function getFileName() {
+  const m    = state.mobile.replace(/\D/g,'').slice(-10);
   const lang = state.lang;
-  const num  = getSentenceId();
-  return `${sid}_${lang}_${num}_${take}.webm`;
+  const take = 'T' + (getTake() + 1);
+  if (state.idx === 0) {
+    // Consent file: MOBILE_LANG_consent_YYYYMMDD
+    const d = new Date();
+    const ds = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+    return `${m}_${lang}_consent_${ds}.webm`;
+  }
+  return `${m}_${lang}_${getSID()}_${take}.webm`;
 }
 
-function isCore() { return state.sentenceIndex < 40; }
+function getSentenceType() {
+  if (state.idx === 0) return 'consent';
+  if (state.idx <= 40) return 'common_core';
+  return 'language_specific';
+}
 
-function updateSentenceDisplay() {
-  const sentences = getSentences();
-  const total = sentences.length;
-  const idx   = state.sentenceIndex;
+function updateDisplay() {
+  const all  = getAll();
+  const total = all.length || 71;
+  const idx   = state.idx;
 
-  document.getElementById('sentenceCounter').textContent = `Sentence ${idx + 1} of ${total || 100}`;
-  document.getElementById('sentenceText').textContent =
-    total ? sentences[idx] : 'Fill in your Speaker ID and Language above to begin.';
-  document.getElementById('sentenceId').textContent =
-    total ? `Sentence ID: ${getSentenceId()} · ${state.lang}_${getSentenceId()}` : 'Sentence ID: —';
+  document.getElementById('sentenceCounter').textContent = `Recording ${idx+1} of ${total}`;
+  document.getElementById('sentenceText').textContent    = all.length ? all[idx] : 'Enter your mobile number and select your language to begin.';
+  document.getElementById('headerProgress').textContent  = `${Object.keys(state.submitted).length} / ${total}`;
 
   const tag = document.getElementById('sentenceTag');
-  tag.textContent = isCore() ? 'Common Core' : 'Language Specific';
-  tag.className   = 'sentence-tag ' + (isCore() ? 'tag-core' : 'tag-specific');
+  if (idx === 0) { tag.textContent='Spoken Consent'; tag.className='sentence-tag tag-consent'; }
+  else if (idx <= 40) { tag.textContent='Common Core'; tag.className='sentence-tag tag-core'; }
+  else { tag.textContent='Language Specific'; tag.className='sentence-tag tag-specific'; }
 
   document.getElementById('btnPrev').disabled = idx === 0;
-  document.getElementById('btnNext').disabled = idx >= 99;
+  document.getElementById('btnNext').disabled = idx >= total-1;
 
   const done = state.submitted[idx];
-  const badge = document.getElementById('doneBadge');
-  badge.className = 'sentence-done-badge' + (done ? ' visible' : '');
+  document.getElementById('doneBadge').className = 'done-badge' + (done ? ' visible' : '');
 
-  updateProgress();
+  const takeN = getTake();
+  const tb    = document.getElementById('takeBadge');
+  const idRow = document.getElementById('sentenceIdRow');
+  if (all.length) {
+    idRow.childNodes[0].textContent = `File: ${getFileName()} `;
+    if (takeN > 0) { tb.textContent=`Take ${takeN}`; tb.style.display='inline-block'; }
+    else tb.style.display='none';
+  } else {
+    idRow.childNodes[0].textContent = 'File: — ';
+    tb.style.display='none';
+  }
+
+  // Speaker ID banner
+  const banner = document.getElementById('idBanner');
+  if (state.mobile.length === 10 && state.lang) {
+    document.getElementById('idDisplay').textContent = state.mobile + '_' + state.lang;
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
 }
 
 function changeSentence(dir) {
-  if (state.isRecording) return;
+  if (state.isRec) return;
   discardRecording();
-  state.sentenceIndex = Math.max(0, Math.min(99, state.sentenceIndex + dir));
-  updateSentenceDisplay();
-}
-
-function updateProgress() {
-  const done = Object.keys(state.submitted).length;
-  document.getElementById('headerProgress').textContent = `${done} / 100`;
-}
-
-// ══════════════════════════════════════════════════════════════════════════
-//  RECORDING
-// ══════════════════════════════════════════════════════════════════════════
-async function toggleRecord() {
-  if (!validateIdentity()) return;
-  state.isRecording ? stopRecording() : await startRecording();
+  state.idx = Math.max(0, Math.min(getTotal()-1, state.idx + dir));
+  updateDisplay();
 }
 
 function validateIdentity() {
-  const sid  = document.getElementById('speakerId').value.trim().toUpperCase();
+  const mob  = document.getElementById('mobileInput').value.replace(/\D/g,'');
   const lang = document.getElementById('langSelect').value;
-  if (!sid || sid.length < 3) { showToast('⚠ Enter your Speaker ID first', 'error'); return false; }
-  if (!lang) { showToast('⚠ Select your language first', 'error'); return false; }
-  state.speakerId = sid;
-  state.lang = lang;
+  if (mob.length !== 10)  { showToast('⚠ Enter your 10-digit mobile number','error'); return false; }
+  if (!lang)              { showToast('⚠ Select your language','error'); return false; }
+  state.mobile = mob; state.lang = lang;
   return true;
+}
+
+// ═══════════════════════════════════════════
+//  RECORDING
+// ═══════════════════════════════════════════
+async function toggleRecord() {
+  if (!validateIdentity()) return;
+  state.isRec ? stopRecording() : await startRecording();
 }
 
 async function startRecording() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: {
-      sampleRate: 16000, channelCount: 1, echoCancellation: false,
-      noiseSuppression: false, autoGainControl: false,
-    }});
-
-    // Waveform
-    state.audioCtx  = new (window.AudioContext || window.webkitAudioContext)();
-    const source    = state.audioCtx.createMediaStreamSource(stream);
-    state.analyser  = state.audioCtx.createAnalyser();
+    const stream = await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    state.actx   = new (window.AudioContext||window.webkitAudioContext)();
+    const src    = state.actx.createMediaStreamSource(stream);
+    state.analyser = state.actx.createAnalyser();
     state.analyser.fftSize = 256;
-    source.connect(state.analyser);
-    drawWaveform();
+    src.connect(state.analyser);
+    drawWave();
 
-    state.mediaRecorder = new MediaRecorder(stream);
-    state.audioChunks   = [];
-    state.mediaRecorder.ondataavailable = e => { if (e.data.size > 0) state.audioChunks.push(e.data); };
-    state.mediaRecorder.onstop = finaliseRecording;
+    const mime   = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(m=>MediaRecorder.isTypeSupported(m))||'';
+    state.mediaRecorder = new MediaRecorder(stream, mime?{mimeType:mime}:{});
+    state.chunks = [];
+    state.mediaRecorder.ondataavailable = e => { if(e.data.size>0) state.chunks.push(e.data); };
+    state.mediaRecorder.onstop = finalise;
     state.mediaRecorder.start(100);
-    state.isRecording = true;
-
+    state.isRec  = true;
     setStatus('recording');
     startTimer();
-
-    // Hard stop at max duration
-    setTimeout(() => { if (state.isRecording) stopRecording(); }, CONFIG.MAX_DURATION * 1000);
-
-  } catch(err) {
-    showToast('❌ Microphone access denied. Please allow mic in browser settings.', 'error');
+    setTimeout(()=>{ if(state.isRec) stopRecording(); }, CONFIG.MAX_DURATION*1000);
+  } catch(e) {
+    showToast('❌ Mic access denied — allow in browser settings','error');
   }
 }
 
 function stopRecording() {
   if (!state.mediaRecorder) return;
   state.mediaRecorder.stop();
-  state.mediaRecorder.stream.getTracks().forEach(t => t.stop());
-  state.isRecording = false;
+  state.mediaRecorder.stream.getTracks().forEach(t=>t.stop());
+  state.isRec = false;
   stopTimer();
-  cancelAnimationFrame(state.animFrameId);
-  if (state.audioCtx) { state.audioCtx.close(); state.audioCtx = null; }
+  cancelAnimationFrame(state.animId);
   setStatus('idle');
 }
 
-function finaliseRecording() {
-  const dur = state.timerSeconds;
-  if (dur < CONFIG.MIN_DURATION) {
-    showToast(`⚠ Recording too short (${dur}s). Minimum is ${CONFIG.MIN_DURATION}s.`, 'error');
-    discardRecording();
-    return;
-  }
-  state.audioBlob = new Blob(state.audioChunks, { type: 'audio/webm' });
-  state.audioUrl  = URL.createObjectURL(state.audioBlob);
-  state.audioEl   = new Audio(state.audioUrl);
-
+function finalise() {
+  if (state.actx) { state.actx.close(); state.actx=null; }
+  const dur = state.timerSec;
+  if (dur < CONFIG.MIN_DURATION) { showToast(`⚠ Too short (${dur}s) — speak for at least 2s`,'error'); discardRecording(); return; }
+  const mime   = state.chunks[0]?.type || 'audio/webm';
+  state.blob   = new Blob(state.chunks, {type:mime});
+  if (state.url) URL.revokeObjectURL(state.url);
+  state.url    = URL.createObjectURL(state.blob);
+  state.audio  = new Audio();
+  state.audio.src = state.url;
+  state.audio.preload = 'auto';
+  state.audio.load();
   setStatus('done');
-  document.getElementById('btnPlay').disabled  = false;
-  document.getElementById('btnTrash').disabled = false;
+  document.getElementById('btnPlay').disabled   = false;
+  document.getElementById('btnTrash').disabled  = false;
   document.getElementById('btnSubmit').disabled = false;
   document.getElementById('btnRecord').disabled = true;
-
-  drawFinalWaveform();
-  showToast('✓ Recording captured. Preview then submit.', 'success');
+  drawFinalWave();
+  showToast(`✓ Take ${getTake()+1} ready — preview or submit`,'success');
 }
 
 function playBack() {
-  if (state.audioEl) { state.audioEl.currentTime = 0; state.audioEl.play(); }
+  if (!state.audio) return;
+  state.audio.currentTime = 0;
+  const p = state.audio.play();
+  if (p && p.catch) p.catch(()=>showToast('Tap ▶ again to play',''));
 }
 
 function discardRecording() {
-  if (state.isRecording) stopRecording();
-  state.audioBlob = null;
-  state.audioUrl  = null;
-  state.audioEl   = null;
-  state.audioChunks = [];
-  state.timerSeconds = 0;
-  document.getElementById('timer').textContent = '0:00';
-  document.getElementById('timer').className   = 'timer';
-  document.getElementById('btnPlay').disabled  = true;
-  document.getElementById('btnTrash').disabled = true;
-  document.getElementById('btnSubmit').disabled = true;
-  document.getElementById('btnRecord').disabled = false;
-  setStatus('idle');
-  clearWaveform();
+  if (state.isRec) stopRecording();
+  if (state.url) { URL.revokeObjectURL(state.url); state.url=null; }
+  state.blob=null; state.audio=null; state.chunks=[];
+  state.timerSec=0;
+  document.getElementById('timer').textContent='0:00';
+  document.getElementById('timer').className='timer';
+  document.getElementById('btnPlay').disabled=true;
+  document.getElementById('btnTrash').disabled=true;
+  document.getElementById('btnSubmit').disabled=true;
+  document.getElementById('btnRecord').disabled=false;
+  setStatus('idle'); clearWave();
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-//  SUBMIT / UPLOAD
-// ══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
+//  SUBMIT
+// ═══════════════════════════════════════════
 async function submitRecording() {
-  if (!state.audioBlob) return;
-  if (!validateIdentity()) return;
-
+  if (!state.blob || !validateIdentity()) return;
+  const filename = getFileName();
   const btn = document.getElementById('btnSubmit');
-  btn.disabled = true;
-  btn.innerHTML = '<span>⏳</span> Uploading…';
-
   const wrap = document.getElementById('uploadWrap');
-  wrap.style.display = 'block';
-  setUploadProgress(10, 'Preparing file…');
 
-  const filename = getFileName('T1');
-  const reader   = new FileReader();
-  reader.readAsDataURL(state.audioBlob);
-  reader.onload  = async () => {
-    const base64 = reader.result.split(',')[1];
-    setUploadProgress(30, 'Sending to Drive…');
+  // FALLBACK: no URL configured → download file
+  if (!CONFIG.UPLOAD_URL || CONFIG.UPLOAD_URL==='YOUR_APPS_SCRIPT_URL_HERE') {
+    const a = document.createElement('a');
+    a.href = state.url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    state.takes[state.idx] = getTake()+1;
+    state.submitted[state.idx] = true;
+    addLog(filename, state.timerSec,'SAVED');
+    showToast('⬇ Downloaded: '+filename,'success');
+    discardRecording();
+    setTimeout(()=>{ if(state.idx<getTotal()-1) changeSentence(1); else showToast('🎉 All done!','success'); },600);
+    return;
+  }
 
-    const payload = {
-      filename,
-      speakerId:   state.speakerId,
-      lang:        state.lang,
-      sentenceId:  getSentenceId(),
-      sentenceText: getCurrentSentence(),
-      duration:    state.timerSeconds,
-      audio:       base64,
-    };
+  btn.disabled=true; btn.innerHTML='<span>⏳</span> Uploading…';
+  wrap.style.display='block'; setProgress(10,'Preparing…');
 
+  const reader = new FileReader();
+  reader.readAsDataURL(state.blob);
+  reader.onload = async () => {
+    const b64 = reader.result.split(',')[1];
+    setProgress(35,'Sending to Drive…');
+    const payload = { filename, mobile:state.mobile, lang:state.lang, sentenceIdx:state.idx,
+      sentenceType:getSentenceType(), sentenceText:getCurrent(), duration:state.timerSec, audio:b64 };
     try {
-      const res  = await fetch(CONFIG.UPLOAD_URL, {
-        method: 'POST',
-        body:   JSON.stringify(payload),
-      });
-      const data = await res.json();
-      setUploadProgress(100, 'Uploaded!');
-
-      if (data.status === 'ok') {
-        state.submitted[state.sentenceIndex] = true;
-        addToLog(filename, state.timerSeconds, 'OK');
-        showToast('✅ Uploaded successfully!', 'success');
-        discardRecording();
-        setTimeout(() => {
-          wrap.style.display = 'none';
-          btn.innerHTML = '<span>⬆</span> Submit & Move to Next';
-          // Auto-advance
-          if (state.sentenceIndex < 99) { changeSentence(1); }
-          else { showToast('🎉 All 100 sentences complete!', 'success'); }
-        }, 800);
-      } else {
-        throw new Error(data.message || 'Upload failed');
-      }
-    } catch(err) {
-      setUploadProgress(0, 'Upload failed — retrying…');
-      addToLog(filename, state.timerSeconds, 'ERR');
-      showToast('❌ Upload failed. Check your connection.', 'error');
-      btn.disabled = false;
-      btn.innerHTML = '<span>⬆</span> Submit & Move to Next';
-      setTimeout(() => { wrap.style.display = 'none'; }, 2000);
+      await fetch(CONFIG.UPLOAD_URL,{method:'POST',mode:'no-cors',body:JSON.stringify(payload)});
+      setProgress(100,'Uploaded!');
+      state.takes[state.idx]=getTake()+1;
+      state.submitted[state.idx]=true;
+      addLog(filename,state.timerSec,'OK');
+      showToast('✅ Uploaded: '+filename,'success');
+      discardRecording();
+      setTimeout(()=>{
+        wrap.style.display='none';
+        btn.innerHTML='<span>⬆</span> Submit & Move to Next';
+        if(state.idx<getTotal()-1) changeSentence(1); else showToast('🎉 All 71 done!','success');
+      },800);
+    } catch(e) {
+      setProgress(0,'Upload failed');
+      addLog(filename,state.timerSec,'ERR');
+      showToast('❌ Upload failed — check connection','error');
+      btn.disabled=false; btn.innerHTML='<span>⬆</span> Submit & Move to Next';
+      setTimeout(()=>{ wrap.style.display='none'; },2500);
     }
   };
 }
 
-function setUploadProgress(pct, label) {
-  document.getElementById('progressFill').style.width = pct + '%';
-  document.getElementById('uploadStatus').textContent = label;
-  document.getElementById('uploadPct').textContent    = pct + '%';
+function setProgress(pct,label) {
+  document.getElementById('progressFill').style.width=pct+'%';
+  document.getElementById('uploadStatus').textContent=label;
+  document.getElementById('uploadPct').textContent=pct+'%';
 }
 
-// ══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
 //  LOG
-// ══════════════════════════════════════════════════════════════════════════
-function addToLog(filename, dur, status) {
-  state.sessionLog.unshift({ filename, dur, status });
-  const tbody = document.getElementById('logBody');
-  const badge = status === 'OK'
-    ? '<span class="badge badge-ok">✓ OK</span>'
-    : '<span class="badge badge-err">✗ ERR</span>';
-  const row = `<tr>
-    <td class="mono" style="font-size:10px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${filename}</td>
-    <td class="mono">${dur}s</td>
-    <td>${badge}</td>
-  </tr>`;
-  if (tbody.firstChild && tbody.firstChild.colSpan === 3) tbody.innerHTML = '';
-  tbody.insertAdjacentHTML('afterbegin', row);
-  document.getElementById('logCount').textContent = state.sessionLog.length;
+// ═══════════════════════════════════════════
+function addLog(filename,dur,status) {
+  state.log.unshift({filename,dur,status});
+  const tbody=document.getElementById('logBody');
+  const cls = status==='OK'?'badge-ok':status==='SAVED'?'badge-save':'badge-err';
+  const lbl = status==='OK'?'✓ OK':status==='SAVED'?'⬇ Saved':'✗ ERR';
+  const row=`<tr><td class="mono" style="font-size:10px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${filename}</td><td class="mono">${dur}s</td><td><span class="badge ${cls}">${lbl}</span></td></tr>`;
+  if(tbody.firstChild&&tbody.firstChild.colSpan==3) tbody.innerHTML='';
+  tbody.insertAdjacentHTML('afterbegin',row);
+  document.getElementById('logCount').textContent=state.log.length;
 }
 
-// ══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
 //  TIMER
-// ══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
 function startTimer() {
-  state.timerSeconds = 0;
-  document.getElementById('timer').className = 'timer recording';
-  state.timerInterval = setInterval(() => {
-    state.timerSeconds++;
-    const m = Math.floor(state.timerSeconds / 60);
-    const s = String(state.timerSeconds % 60).padStart(2,'0');
-    document.getElementById('timer').textContent = `${m}:${s}`;
-  }, 1000);
+  state.timerSec=0;
+  document.getElementById('timer').className='timer recording';
+  state.timerInt=setInterval(()=>{
+    state.timerSec++;
+    const m=Math.floor(state.timerSec/60), s=String(state.timerSec%60).padStart(2,'0');
+    document.getElementById('timer').textContent=`${m}:${s}`;
+  },1000);
 }
+function stopTimer(){ clearInterval(state.timerInt); document.getElementById('timer').className='timer'; }
 
-function stopTimer() {
-  clearInterval(state.timerInterval);
-  document.getElementById('timer').className = 'timer';
-}
-
-// ══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
 //  WAVEFORM
-// ══════════════════════════════════════════════════════════════════════════
-function drawWaveform() {
-  const canvas = document.getElementById('waveform');
-  const ctx    = canvas.getContext('2d');
-  canvas.width  = canvas.offsetWidth * devicePixelRatio;
-  canvas.height = canvas.offsetHeight * devicePixelRatio;
-  document.getElementById('waveformEmpty').style.display = 'none';
-
+// ═══════════════════════════════════════════
+function drawWave() {
+  const c=document.getElementById('waveform'),ctx=c.getContext('2d');
+  c.width=c.offsetWidth*devicePixelRatio; c.height=c.offsetHeight*devicePixelRatio;
+  document.getElementById('waveformEmpty').style.display='none';
   function draw() {
-    if (!state.analyser) return;
-    state.animFrameId = requestAnimationFrame(draw);
-    const buf = new Uint8Array(state.analyser.frequencyBinCount);
+    if(!state.analyser)return;
+    state.animId=requestAnimationFrame(draw);
+    const buf=new Uint8Array(state.analyser.frequencyBinCount);
     state.analyser.getByteTimeDomainData(buf);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = '#1A5CB8';
-    ctx.lineWidth   = 2;
-    ctx.beginPath();
-    const sliceW = canvas.width / buf.length;
-    buf.forEach((v, i) => {
-      const x = i * sliceW;
-      const y = (v / 128.0) * (canvas.height / 2);
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-    });
+    ctx.clearRect(0,0,c.width,c.height);
+    ctx.strokeStyle='#1A5CB8';ctx.lineWidth=2;ctx.beginPath();
+    const sw=c.width/buf.length;
+    buf.forEach((v,i)=>{ const x=i*sw,y=(v/128)*(c.height/2); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
     ctx.stroke();
   }
   draw();
 }
-
-function drawFinalWaveform() {
-  const canvas = document.getElementById('waveform');
-  const ctx    = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.strokeStyle = '#00C48C';
-  ctx.lineWidth   = 2;
-  ctx.beginPath();
-  const w = canvas.width, h = canvas.height;
-  for (let x = 0; x < w; x++) {
-    const y = h/2 + Math.sin(x * 0.06) * (h * 0.3) * Math.sin(x * 0.008);
-    x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  }
+function drawFinalWave() {
+  const c=document.getElementById('waveform'),ctx=c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.strokeStyle='#00C48C';ctx.lineWidth=2;ctx.beginPath();
+  for(let x=0;x<c.width;x++){const y=c.height/2+Math.sin(x*.06)*(c.height*.3)*Math.sin(x*.008);x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
   ctx.stroke();
 }
-
-function clearWaveform() {
-  const canvas = document.getElementById('waveform');
-  const ctx    = canvas.getContext('2d');
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  document.getElementById('waveformEmpty').style.display = '';
+function clearWave() {
+  const c=document.getElementById('waveform');
+  c.getContext('2d').clearRect(0,0,c.width,c.height);
+  document.getElementById('waveformEmpty').style.display='';
 }
 
-// ══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
 //  STATUS
-// ══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
 function setStatus(s) {
-  const bar  = document.getElementById('statusBar');
-  const dot  = document.getElementById('statusDot');
-  const txt  = document.getElementById('statusText');
-  const recBtn  = document.getElementById('btnRecord');
-  const recIcon = document.getElementById('recIcon');
-  const recLbl  = document.getElementById('recLabel');
-
-  if (s === 'idle') {
-    bar.className = 'status-bar status-idle';
-    dot.className = 'status-dot dot-idle';
-    txt.textContent = 'Ready to record';
-    recBtn.className = 'btn-record idle';
-    recIcon.textContent = '⏺';
-    recLbl.textContent  = 'Start Recording';
-  } else if (s === 'recording') {
-    bar.className = 'status-bar status-record';
-    dot.className = 'status-dot dot-record';
-    txt.textContent = 'Recording… speak now';
-    recBtn.className = 'btn-record recording';
-    recIcon.textContent = '⏹';
-    recLbl.textContent  = 'Stop Recording';
-  } else if (s === 'done') {
-    bar.className = 'status-bar status-done';
-    dot.className = 'status-dot dot-done';
-    txt.textContent = 'Recording ready — preview or submit';
-  }
+  const bar=document.getElementById('statusBar'),dot=document.getElementById('statusDot'),txt=document.getElementById('statusText');
+  const btn=document.getElementById('btnRecord');
+  if(s==='idle'){bar.className='status-bar status-idle';dot.className='status-dot dot-idle';txt.textContent='Ready to record';btn.className='btn-record idle';document.getElementById('recIcon').textContent='⏺';document.getElementById('recLabel').textContent='Start Recording';}
+  else if(s==='recording'){bar.className='status-bar status-record';dot.className='status-dot dot-record';txt.textContent='Recording… speak now';btn.className='btn-record recording';document.getElementById('recIcon').textContent='⏹';document.getElementById('recLabel').textContent='Stop Recording';}
+  else if(s==='done'){bar.className='status-bar status-done';dot.className='status-dot dot-done';txt.textContent='Recording ready — preview or submit';}
 }
 
-// ══════════════════════════════════════════════════════════════════════════
-//  CHECKLIST
-// ══════════════════════════════════════════════════════════════════════════
-function toggleCheck(el) {
+// ═══════════════════════════════════════════
+//  CHECKLIST & TOAST
+// ═══════════════════════════════════════════
+function toggleCheck(el){
   el.classList.toggle('checked');
-  const box = el.querySelector('.check-box');
-  box.textContent = el.classList.contains('checked') ? '✓' : '';
+  el.querySelector('.check-box').textContent=el.classList.contains('checked')?'✓':'';
 }
-
-// ══════════════════════════════════════════════════════════════════════════
-//  TOAST
-// ══════════════════════════════════════════════════════════════════════════
 let toastTimer;
-function showToast(msg, type = '') {
-  const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className   = 'toast show ' + type;
+function showToast(msg,type=''){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast show '+(type||'');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
+  toastTimer=setTimeout(()=>{el.className='toast';},3200);
 }
 
-// ══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════
 //  INIT
-// ══════════════════════════════════════════════════════════════════════════
-document.getElementById('speakerId').addEventListener('input', updateSentenceDisplay);
-document.getElementById('langSelect').addEventListener('change', updateSentenceDisplay);
-updateSentenceDisplay();
+// ═══════════════════════════════════════════
+document.getElementById('mobileInput').addEventListener('input', ()=>{
+  const v = document.getElementById('mobileInput').value.replace(/\D/g,'').slice(0,10);
+  document.getElementById('mobileInput').value = v;
+  updateDisplay();
+});
+document.getElementById('langSelect').addEventListener('change', ()=>{ state.idx=0; updateDisplay(); });
+updateDisplay();
 </script>
 </body>
 </html>
