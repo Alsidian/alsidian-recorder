@@ -229,6 +229,8 @@
 //  CONFIG
 // ═══════════════════════════════════════════
 const CONFIG = {
+  // ── PASTE YOUR APPS SCRIPT WEB APP URL BELOW after completing setup ──
+  // Sheet ID for reference: 1EzwZXCkRG2J5rqR9K1pD-Q8e7x9mvXDyKzovHGhXTRQ
   UPLOAD_URL:   "https://script.google.com/a/macros/alsidian.com/s/AKfycbyAm_G97quZpyvdUMFib9-Arx8B6WxBJw5hQfWDVdoyhBkiqOB2DUvcfqMHT5qwE6Sw_w/exec",
   MAX_DURATION: 60,   // consent can be longer
   MIN_DURATION: 2,
@@ -1058,54 +1060,84 @@ function discardRecording() {
 async function submitRecording() {
   if (!state.blob || !validateIdentity()) return;
   const filename = getFileName();
-  const btn = document.getElementById('btnSubmit');
+  const btn  = document.getElementById('btnSubmit');
   const wrap = document.getElementById('uploadWrap');
 
-  // FALLBACK: no URL configured → download file
-  if (!CONFIG.UPLOAD_URL || CONFIG.UPLOAD_URL==='YOUR_APPS_SCRIPT_URL_HERE') {
-    const a = document.createElement('a');
-    a.href = state.url; a.download = filename;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    state.takes[state.idx] = getTake()+1;
-    state.submitted[state.idx] = true;
-    addLog(filename, state.timerSec,'SAVED');
-    showToast('⬇ Downloaded: '+filename,'success');
-    discardRecording();
-    setTimeout(()=>{ if(state.idx<getTotal()-1) changeSentence(1); else showToast('🎉 All done!','success'); },600);
+  // ── NOT CONFIGURED: show clear error instead of downloading ──────────
+  if (!CONFIG.UPLOAD_URL || CONFIG.UPLOAD_URL === 'YOUR_APPS_SCRIPT_URL_HERE') {
+    showToast('❌ Upload URL not configured — see setup guide','error');
     return;
   }
 
-  btn.disabled=true; btn.innerHTML='<span>⏳</span> Uploading…';
-  wrap.style.display='block'; setProgress(10,'Preparing…');
+  btn.disabled  = true;
+  btn.innerHTML = '<span>⏳</span> Uploading…';
+  wrap.style.display = 'block';
+  setProgress(10, 'Reading audio…');
 
-  const reader = new FileReader();
-  reader.readAsDataURL(state.blob);
-  reader.onload = async () => {
-    const b64 = reader.result.split(',')[1];
-    setProgress(35,'Sending to Drive…');
-    const payload = { filename, mobile:state.mobile, lang:state.lang, sentenceIdx:state.idx,
-      sentenceType:getSentenceType(), sentenceText:getCurrent(), duration:state.timerSec, audio:b64 };
-    try {
-      await fetch(CONFIG.UPLOAD_URL,{method:'POST',mode:'no-cors',body:JSON.stringify(payload)});
-      setProgress(100,'Uploaded!');
-      state.takes[state.idx]=getTake()+1;
-      state.submitted[state.idx]=true;
-      addLog(filename,state.timerSec,'OK');
-      showToast('✅ Uploaded: '+filename,'success');
-      discardRecording();
-      setTimeout(()=>{
-        wrap.style.display='none';
-        btn.innerHTML='<span>⬆</span> Submit & Move to Next';
-        if(state.idx<getTotal()-1) changeSentence(1); else showToast('🎉 All 71 done!','success');
-      },800);
-    } catch(e) {
-      setProgress(0,'Upload failed');
-      addLog(filename,state.timerSec,'ERR');
-      showToast('❌ Upload failed — check connection','error');
-      btn.disabled=false; btn.innerHTML='<span>⬆</span> Submit & Move to Next';
-      setTimeout(()=>{ wrap.style.display='none'; },2500);
-    }
-  };
+  try {
+    // Convert blob to base64
+    const b64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload  = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(state.blob);
+    });
+
+    setProgress(30, 'Sending to Drive…');
+
+    const payload = {
+      filename,
+      mobile:       state.mobile,
+      lang:         state.lang,
+      sentenceIdx:  state.idx,
+      sentenceType: getSentenceType(),
+      sentenceText: getCurrent(),
+      duration:     state.timerSec,
+      audio:        b64,
+    };
+
+    // ── Apps Script requires no-cors because it redirects on POST.
+    //    We treat any non-thrown fetch as success (redirect = script ran).
+    //    The script itself handles Drive save + Sheet append.
+    setProgress(60, 'Saving to Drive…');
+
+    const controller = new AbortController();
+    const timeout    = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
+    await fetch(CONFIG.UPLOAD_URL, {
+      method:  'POST',
+      mode:    'no-cors',          // required for Apps Script
+      body:    JSON.stringify(payload),
+      signal:  controller.signal,
+    });
+    clearTimeout(timeout);
+
+    // If fetch didn't throw, the request reached Apps Script successfully
+    setProgress(100, 'Saved to Drive ✓');
+    state.takes[state.idx]     = getTake() + 1;
+    state.submitted[state.idx] = true;
+    addLog(filename, state.timerSec, 'OK');
+    showToast('✅ Saved to Drive: ' + filename, 'success');
+    discardRecording();
+
+    setTimeout(() => {
+      wrap.style.display = 'none';
+      btn.disabled       = false;
+      btn.innerHTML      = '<span>⬆</span> Submit & Move to Next';
+      if (state.idx < getTotal() - 1) changeSentence(1);
+      else showToast('🎉 All 71 recordings complete!', 'success');
+    }, 1000);
+
+  } catch (err) {
+    let msg = 'Upload failed';
+    if (err.name === 'AbortError') msg = 'Timed out — check your connection';
+    setProgress(0, msg);
+    addLog(filename, state.timerSec, 'ERR');
+    showToast('❌ ' + msg + ' — tap Submit to retry', 'error');
+    btn.disabled  = false;
+    btn.innerHTML = '<span>⬆</span> Submit & Move to Next';
+    setTimeout(() => { wrap.style.display = 'none'; }, 3000);
+  }
 }
 
 function setProgress(pct,label) {
