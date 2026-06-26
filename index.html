@@ -357,7 +357,15 @@ async function togRec(){
 }
 async function startRec(){
   try{
-    const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+    // ── SAFE AUDIO CONSTRAINTS ────────────────────────────────────────
+    // Do NOT set echoCancellation/noiseSuppression/autoGainControl all
+    // to false simultaneously — iOS Safari and Android Chrome abort the
+    // stream silently after 2-3 seconds when all three are disabled.
+    // channelCount:1 (mono) and sampleRate:16000 are safe and sufficient.
+    const stream=await navigator.mediaDevices.getUserMedia({
+      audio:{channelCount:1, sampleRate:16000}
+    });
+
     ST.actx=new(window.AudioContext||window.webkitAudioContext)();
     const src=ST.actx.createMediaStreamSource(stream);
 
@@ -374,24 +382,80 @@ async function startRec(){
     src.connect(gain);
     gain.connect(dest);
 
-    // Waveform analyser taps off gain so display also reflects boosted level
+    // Waveform analyser taps off gain so display reflects boosted level
     ST.analyser=ST.actx.createAnalyser();
     ST.analyser.fftSize=256;
     gain.connect(ST.analyser);
     drawWv();
 
     // Record the boosted stream (dest.stream), not the raw mic stream
-    const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(m=>MediaRecorder.isTypeSupported(m))||'';
-    ST.mr=new MediaRecorder(dest.stream,mime?{mimeType:mime}:{});
-    ST.chunks=[];ST.mr.ondataavailable=e=>{if(e.data.size>0)ST.chunks.push(e.data);};
-    ST.mr.onstop=finalise;ST.mr.start(100);ST.isRec=true;setStat('r');startTim();
+    const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg']
+      .find(m=>MediaRecorder.isTypeSupported(m))||'';
+    ST.mr=new MediaRecorder(dest.stream, mime?{mimeType:mime}:{});
+    ST.chunks=[];
+    ST.mr.ondataavailable=e=>{if(e.data&&e.data.size>0)ST.chunks.push(e.data);};
 
-    // Store raw stream for proper cleanup on stop
+    // ── GUARD AGAINST UNEXPECTED EARLY STOP ──────────────────────────
+    // onstop fires both on normal stop AND if browser aborts the stream.
+    // wasUnexpected=true means the browser stopped it, not the speaker.
+    ST.mr.onstop=()=>{
+      const wasUnexpected = ST.isRec; // ST.isRec still true = we didn't call stopRec()
+      ST.isRec = false;
+      stopTim();
+      cancelAnimationFrame(ST.animId);
+      if(ST.actx){ST.actx.close(); ST.actx=null;}
+      stream.getTracks().forEach(t=>t.stop());
+      ST.rawStream=null;
+      if(wasUnexpected && ST.tSec < CFG.MIN){
+        // Aborted too early — warn speaker and reset cleanly
+        setStat('i');
+        showT('⚠ Recording stopped early — please tap Record again','err');
+        discRec();
+        return;
+      }
+      setStat('p'); // show Processing… while normaliser runs
+      finalise();
+    };
+
+    // onerror — catches any MediaRecorder internal failure
+    ST.mr.onerror=(e)=>{
+      console.error('[Alsidian] MediaRecorder error:',e);
+      ST.isRec=false;
+      stopTim();
+      cancelAnimationFrame(ST.animId);
+      if(ST.actx){ST.actx.close(); ST.actx=null;}
+      stream.getTracks().forEach(t=>t.stop());
+      ST.rawStream=null;
+      setStat('i');
+      showT('⚠ Recording error — please tap Record again','err');
+      discRec();
+    };
+
+    // 250ms timeslice — more stable on mobile than 100ms
+    ST.mr.start(250);
+    ST.isRec=true;
+    setStat('r');
+    startTim();
+
+    // Store raw stream ref for stopRec cleanup
     ST.rawStream=stream;
-    setTimeout(()=>{if(ST.isRec)stopRec();},CFG.MAX*1000);
-  }catch(e){showT('❌ Mic access denied — allow in browser settings','err');}
+
+    // Hard stop at MAX duration
+    ST.maxTimer=setTimeout(()=>{if(ST.isRec)stopRec();},CFG.MAX*1000);
+
+  }catch(e){
+    showT('❌ Mic access denied — allow microphone in browser settings','err');
+  }
 }
-function stopRec(){if(!ST.mr)return;ST.mr.stop();if(ST.rawStream)ST.rawStream.getTracks().forEach(t=>t.stop());ST.rawStream=null;ST.isRec=false;stopTim();cancelAnimationFrame(ST.animId);setStat('i');}
+function stopRec(){
+  if(!ST.mr)return;
+  clearTimeout(ST.maxTimer);
+  // Setting isRec=false BEFORE calling mr.stop() tells the onstop
+  // handler this was a deliberate stop (not an unexpected browser abort)
+  ST.isRec=false;
+  try{ST.mr.stop();}catch(e){}
+  // Stream cleanup and setStat('p') happen inside the onstop handler
+}
 function finalise(){
   if(ST.actx){ST.actx.close();ST.actx=null;}
   const dur=ST.tSec;
@@ -408,7 +472,7 @@ function finalise(){
   // ════════════════════════════════════════════════════════════════════
   // TUNE THESE TWO VALUES to match your ffmpeg script:
   const TARGET_DB   = -14; // ← target loudness in dBFS (industry standard for ASR)
-  const THRESHOLD_DB= -28; // ← boost only if mean volume is below this level
+  const THRESHOLD_DB= -24; // ← boost only if mean volume is below this level
   //     -28 dB = genuinely quiet recording that needs help
   //     -24 dB = boost more aggressively
   //     -20 dB = boost almost everything
@@ -602,9 +666,30 @@ function clrWv(){const c=document.getElementById('wv');c.getContext('2d').clearR
 // ─── STATUS ───────────────────────────────────────────────────────────
 function setStat(s){
   const bar=document.getElementById('sbar'),dot=document.getElementById('sdot'),txt=document.getElementById('stxt2'),btn=document.getElementById('brec');
-  if(s==='i'){bar.className='sbar si0';dot.className='sd d0';txt.textContent='Ready to record';btn.className='brec idle';document.getElementById('ricon').textContent='⏺';document.getElementById('rlbl').textContent='Start Recording';}
-  else if(s==='r'){bar.className='sbar si1';dot.className='sd d1';txt.textContent='Recording… speak now';btn.className='brec rec';document.getElementById('ricon').textContent='⏹';document.getElementById('rlbl').textContent='Stop Recording';}
-  else if(s==='d'){bar.className='sbar si2';dot.className='sd d2';txt.textContent='Recording ready — preview or submit';}
+  if(s==='i'){
+    bar.className='sbar si0';dot.className='sd d0';
+    txt.textContent='Ready to record';
+    btn.className='brec idle';btn.disabled=false;
+    document.getElementById('ricon').textContent='⏺';
+    document.getElementById('rlbl').textContent='Start Recording';
+  }else if(s==='r'){
+    bar.className='sbar si1';dot.className='sd d1';
+    txt.textContent='Recording… speak now';
+    btn.className='brec rec';btn.disabled=false;
+    document.getElementById('ricon').textContent='⏹';
+    document.getElementById('rlbl').textContent='Stop Recording';
+  }else if(s==='p'){
+    // Processing state — grey out Record, show spinner text
+    bar.className='sbar si0';dot.className='sd d0';
+    txt.textContent='Processing audio…';
+    btn.className='brec idle';btn.disabled=true;
+    document.getElementById('ricon').textContent='⏳';
+    document.getElementById('rlbl').textContent='Processing…';
+  }else if(s==='d'){
+    bar.className='sbar si2';dot.className='sd d2';
+    txt.textContent='Recording ready — preview or submit';
+    btn.disabled=true; // keep Record greyed while preview/submit is active
+  }
 }
 
 // ─── TOAST ────────────────────────────────────────────────────────────
