@@ -472,7 +472,7 @@ function finalise(){
   // ════════════════════════════════════════════════════════════════════
   // TUNE THESE TWO VALUES to match your ffmpeg script:
   const TARGET_DB   = -14; // ← target loudness in dBFS (industry standard for ASR)
-  const THRESHOLD_DB= -28; // ← boost only if mean volume is below this level
+  const THRESHOLD_DB= -24; // ← boost only if mean volume is below this level
   //     -28 dB = genuinely quiet recording that needs help
   //     -24 dB = boost more aggressively
   //     -20 dB = boost almost everything
@@ -511,13 +511,29 @@ async function autoNormalise(rawBlob, targetDb, thresholdDb, mime){
       // Re-render the audio with the boost applied
       const sampleRate = decoded.sampleRate;
       const length     = decoded.length;
+      // OfflineAudioContext(channels, length, sampleRate)
+      // channels=1 ensures mono output — prevents stereo artefacts on re-encode
       const ctx2       = new OfflineAudioContext(1, length, sampleRate);
       const srcNode    = ctx2.createBufferSource();
-      srcNode.buffer   = decoded;
-      const gainNode   = ctx2.createGain();
-      gainNode.gain.value = safeGain;
-      srcNode.connect(gainNode);
-      gainNode.connect(ctx2.destination);
+      // If decoded is stereo, merge to mono before boosting
+      if(decoded.numberOfChannels > 1){
+        const merger = ctx2.createChannelMerger(1);
+        // Average left+right into single mono channel
+        const splitter = ctx2.createChannelSplitter(decoded.numberOfChannels);
+        srcNode.connect(splitter);
+        for(let ch=0; ch<decoded.numberOfChannels; ch++){
+          splitter.connect(merger, ch, 0);
+        }
+        const gainNode = ctx2.createGain();
+        gainNode.gain.value = safeGain / decoded.numberOfChannels;
+        merger.connect(gainNode);
+        gainNode.connect(ctx2.destination);
+      } else {
+        const gainNode   = ctx2.createGain();
+        gainNode.gain.value = safeGain;
+        srcNode.connect(gainNode);
+        gainNode.connect(ctx2.destination);
+      }
       srcNode.start(0);
       const boosted    = await ctx2.startRendering();
 
@@ -545,12 +561,30 @@ async function autoNormalise(rawBlob, targetDb, thresholdDb, mime){
 // Re-encodes an AudioBuffer back to the browser's native audio format
 function encodeAudioBuffer(audioBuffer, preferredMime){
   return new Promise((resolve, reject)=>{
-    // Create a short MediaStream from the AudioBuffer using Web Audio
+    // Re-encode AudioBuffer back to compressed audio.
+    // CRITICAL: force mono throughout — if any node defaults to stereo,
+    // phase cancellation between the two identical channels creates a
+    // shrill metallic hum in the output file.
     const ctx       = new AudioContext({sampleRate: audioBuffer.sampleRate});
     const src       = ctx.createBufferSource();
     src.buffer      = audioBuffer;
     const dest      = ctx.createMediaStreamDestination();
-    src.connect(dest);
+
+    // Force mono on the destination node
+    try{ dest.channelCount=1; dest.channelCountMode='explicit'; }catch(e){}
+
+    // Downmix to mono: if audio has >1 channel, average all channels into one
+    if(audioBuffer.numberOfChannels > 1){
+      const splitter  = ctx.createChannelSplitter(audioBuffer.numberOfChannels);
+      const merger    = ctx.createChannelMerger(1);
+      src.connect(splitter);
+      for(let ch=0; ch<audioBuffer.numberOfChannels; ch++){
+        splitter.connect(merger, ch, 0);
+      }
+      merger.connect(dest);
+    } else {
+      src.connect(dest);
+    }
 
     const mime2     = MediaRecorder.isTypeSupported(preferredMime)
                       ? preferredMime
