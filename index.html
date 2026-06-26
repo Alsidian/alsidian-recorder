@@ -472,7 +472,7 @@ function finalise(){
   // ════════════════════════════════════════════════════════════════════
   // TUNE THESE TWO VALUES to match your ffmpeg script:
   const TARGET_DB   = -14; // ← target loudness in dBFS (industry standard for ASR)
-  const THRESHOLD_DB= -24; // ← boost only if mean volume is below this level
+  const THRESHOLD_DB= -28; // ← boost only if mean volume is below this level
   //     -28 dB = genuinely quiet recording that needs help
   //     -24 dB = boost more aggressively
   //     -20 dB = boost almost everything
@@ -688,7 +688,12 @@ function setStat(s){
   }else if(s==='d'){
     bar.className='sbar si2';dot.className='sd d2';
     txt.textContent='Recording ready — preview or submit';
-    btn.disabled=true; // keep Record greyed while preview/submit is active
+    // Button stays grey/disabled but label returns to "Start Recording"
+    // so speaker is not confused by "Processing…" still showing
+    btn.disabled=true;
+    btn.className='brec idle';
+    document.getElementById('ricon').textContent='⏺';
+    document.getElementById('rlbl').textContent='Start Recording';
   }
 }
 
