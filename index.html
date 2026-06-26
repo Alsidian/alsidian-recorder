@@ -360,16 +360,34 @@ async function startRec(){
     const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
     ST.actx=new(window.AudioContext||window.webkitAudioContext)();
     const src=ST.actx.createMediaStreamSource(stream);
-    ST.analyser=ST.actx.createAnalyser();ST.analyser.fftSize=256;src.connect(ST.analyser);
+
+    // GAIN BOOST: amplifies quiet voices 2.5x before recording.
+    // Safe for phone mics at normal speaking distance. No clipping risk.
+    // Adjust value: 1.5=subtle 2.5=recommended 3.5=strong
+    const gain=ST.actx.createGain();
+    gain.gain.value=2.5;
+    const dest=ST.actx.createMediaStreamDestination();
+    src.connect(gain);
+    gain.connect(dest);
+
+    // Waveform analyser taps off gain so display also reflects boosted level
+    ST.analyser=ST.actx.createAnalyser();
+    ST.analyser.fftSize=256;
+    gain.connect(ST.analyser);
     drawWv();
+
+    // Record the boosted stream (dest.stream), not the raw mic stream
     const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(m=>MediaRecorder.isTypeSupported(m))||'';
-    ST.mr=new MediaRecorder(stream,mime?{mimeType:mime}:{});
+    ST.mr=new MediaRecorder(dest.stream,mime?{mimeType:mime}:{});
     ST.chunks=[];ST.mr.ondataavailable=e=>{if(e.data.size>0)ST.chunks.push(e.data);};
     ST.mr.onstop=finalise;ST.mr.start(100);ST.isRec=true;setStat('r');startTim();
+
+    // Store raw stream for proper cleanup on stop
+    ST.rawStream=stream;
     setTimeout(()=>{if(ST.isRec)stopRec();},CFG.MAX*1000);
   }catch(e){showT('❌ Mic access denied — allow in browser settings','err');}
 }
-function stopRec(){if(!ST.mr)return;ST.mr.stop();ST.mr.stream.getTracks().forEach(t=>t.stop());ST.isRec=false;stopTim();cancelAnimationFrame(ST.animId);setStat('i');}
+function stopRec(){if(!ST.mr)return;ST.mr.stop();if(ST.rawStream)ST.rawStream.getTracks().forEach(t=>t.stop());ST.rawStream=null;ST.isRec=false;stopTim();cancelAnimationFrame(ST.animId);setStat('i');}
 function finalise(){
   if(ST.actx){ST.actx.close();ST.actx=null;}
   const dur=ST.tSec;
