@@ -355,45 +355,124 @@ async function togRec(){
   }
   ST.isRec?stopRec():await startRec();
 }
+
 async function startRec(){
   try{
-    const stream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
-    ST.actx=new(window.AudioContext||window.webkitAudioContext)();
-    const src=ST.actx.createMediaStreamSource(stream);
-    ST.analyser=ST.actx.createAnalyser();ST.analyser.fftSize=256;src.connect(ST.analyser);
-    drawWv();
-    const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg'].find(m=>MediaRecorder.isTypeSupported(m))||'';
-    ST.mr=new MediaRecorder(stream,mime?{mimeType:mime}:{});
-    ST.chunks=[];ST.mr.ondataavailable=e=>{if(e.data.size>0)ST.chunks.push(e.data);};
-    ST.mr.onstop=finalise;ST.mr.start(100);ST.isRec=true;setStat('r');startTim();
-    setTimeout(()=>{if(ST.isRec)stopRec();},CFG.MAX*1000);
-  }catch(e){showT('❌ Mic access denied — allow in browser settings','err');}
+    // Use safe constraints — aggressive settings (all false) cause silent early
+    // stop on iOS Safari and some Android Chrome versions
+    const constraints={audio:{channelCount:1,sampleRate:16000}};
+    const stream=await navigator.mediaDevices.getUserMedia(constraints);
+
+    // AudioContext for waveform only
+    try{
+      ST.actx=new(window.AudioContext||window.webkitAudioContext)();
+      const src=ST.actx.createMediaStreamSource(stream);
+      ST.analyser=ST.actx.createAnalyser();
+      ST.analyser.fftSize=256;
+      src.connect(ST.analyser);
+      drawWv();
+    }catch(e){
+      // Waveform is optional — don't fail recording if AudioContext fails
+      document.getElementById('we').style.display='none';
+    }
+
+    // Pick best supported MIME type
+    const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg']
+      .find(m=>MediaRecorder.isTypeSupported(m))||'';
+
+    ST.mr=new MediaRecorder(stream, mime?{mimeType:mime}:{});
+    ST.chunks=[];
+    ST.stream=stream; // store stream reference for cleanup
+
+    ST.mr.ondataavailable=e=>{if(e.data&&e.data.size>0)ST.chunks.push(e.data);};
+
+    // onstop fires both on normal stop AND unexpected early stop
+    // We detect unexpected early stop by checking ST.isRec flag
+    ST.mr.onstop=()=>{
+      const wasUnexpected=ST.isRec; // still true = we didn't call stopRec()
+      ST.isRec=false;
+      stopTim();
+      cancelAnimationFrame(ST.animId);
+      if(ST.actx){ST.actx.close();ST.actx=null;}
+      // Stop all tracks
+      stream.getTracks().forEach(t=>t.stop());
+      setStat('i');
+      if(wasUnexpected&&ST.tSec<CFG.MIN){
+        // Unexpected early stop with too little audio — notify and reset
+        showT('⚠ Recording stopped early — please tap Record again','err');
+        discRec();
+        return;
+      }
+      finalise();
+    };
+
+    // onerror — catches MediaRecorder failures
+    ST.mr.onerror=(e)=>{
+      console.error('MediaRecorder error:',e);
+      ST.isRec=false;
+      stopTim();
+      cancelAnimationFrame(ST.animId);
+      if(ST.actx){ST.actx.close();ST.actx=null;}
+      stream.getTracks().forEach(t=>t.stop());
+      setStat('i');
+      showT('⚠ Recording error — please tap Record again','err');
+      discRec();
+    };
+
+    ST.mr.start(250); // 250ms chunks — more stable than 100ms on mobile
+    ST.isRec=true;
+    setStat('r');
+    startTim();
+
+    // Hard stop at MAX duration
+    ST.maxTimer=setTimeout(()=>{if(ST.isRec)stopRec();},CFG.MAX*1000);
+
+  }catch(e){
+    showT('❌ Mic access denied — allow microphone in browser settings','err');
+  }
 }
-function stopRec(){if(!ST.mr)return;ST.mr.stop();ST.mr.stream.getTracks().forEach(t=>t.stop());ST.isRec=false;stopTim();cancelAnimationFrame(ST.animId);setStat('i');}
+
+function stopRec(){
+  if(!ST.mr)return;
+  clearTimeout(ST.maxTimer);
+  try{ST.mr.stop();}catch(e){}
+  // Note: ST.isRec, stream cleanup and finalise() all happen inside onstop handler
+}
+
 function finalise(){
-  if(ST.actx){ST.actx.close();ST.actx=null;}
   const dur=ST.tSec;
-  if(dur<CFG.MIN){showT(`⚠ Too short (${dur}s) — speak at least 2s`,'err');discRec();return;}
+  if(dur<CFG.MIN||ST.chunks.length===0){
+    showT(`⚠ Too short (${dur}s) — speak for at least 2 seconds`,'err');
+    discRec();return;
+  }
   const mime=ST.chunks[0]?.type||'audio/webm';
   ST.blob=new Blob(ST.chunks,{type:mime});
   if(ST.url)URL.revokeObjectURL(ST.url);
   ST.url=URL.createObjectURL(ST.blob);
-  ST.aud=new Audio();ST.aud.src=ST.url;ST.aud.preload='auto';ST.aud.load();
+  ST.aud=new Audio();
+  ST.aud.src=ST.url;
+  ST.aud.preload='auto';
+  ST.aud.load();
   setStat('d');
   document.getElementById('bplay').disabled=false;
   document.getElementById('btrash').disabled=false;
   document.getElementById('bsub').disabled=false;
   document.getElementById('brec').disabled=true;
-  drawFWv();showT(`✓ Take ${getTake()+1} ready — preview or submit`,'ok');
+  drawFWv();
+  showT(`✓ Take ${getTake()+1} ready — preview or submit`,'ok');
 }
 function playBk(){if(!ST.aud)return;ST.aud.currentTime=0;const p=ST.aud.play();if(p&&p.catch)p.catch(()=>showT('Tap ▶ again to play',''));}
 function discRec(){
   if(ST.isRec)stopRec();
+  clearTimeout(ST.maxTimer);
   if(ST.url){URL.revokeObjectURL(ST.url);ST.url=null;}
-  ST.blob=null;ST.aud=null;ST.chunks=[];ST.tSec=0;
-  document.getElementById('tim').textContent='0:00';document.getElementById('tim').className='tim';
-  document.getElementById('bplay').disabled=true;document.getElementById('btrash').disabled=true;
-  document.getElementById('bsub').disabled=true;document.getElementById('brec').disabled=false;
+  ST.blob=null;ST.aud=null;ST.chunks=[];ST.tSec=0;ST.mr=null;ST.stream=null;
+  document.getElementById('tim').textContent='0:00';
+  document.getElementById('tim').className='tim';
+  document.getElementById('bplay').disabled=true;
+  document.getElementById('btrash').disabled=true;
+  document.getElementById('bsub').disabled=true;
+  document.getElementById('brec').disabled=false;
   setStat('i');clrWv();
 }
 
