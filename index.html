@@ -463,145 +463,126 @@ function finalise(){
   const mime=ST.chunks[0]?.type||'audio/webm';
   const rawBlob=new Blob(ST.chunks,{type:mime});
 
-  // ── AUTO VOLUME NORMALISATION ──────────────────────────────────────
-  // Mirrors the ffmpeg shell script logic but runs entirely in the browser.
-  // Step 1: decode the raw recording and measure its mean dB level.
-  // Step 2: if mean dB is below THRESHOLD, apply a gain boost to reach TARGET.
-  // Step 3: re-encode to a new Blob and use that for playback + upload.
+  // ── AUTO VOLUME NORMALISATION (no re-encoding) ──────────────────────
+  // Decodes audio to PCM → measures mean dB → if below threshold,
+  // scales PCM samples directly → encodes once to final Blob.
+  // This avoids the double-encode artefact (stereo hum) from the previous
+  // OfflineAudioContext → MediaRecorder re-encode approach.
   //
   // ════════════════════════════════════════════════════════════════════
-  // TUNE THESE TWO VALUES to match your ffmpeg script:
-  const TARGET_DB   = -14; // ← target loudness in dBFS (industry standard for ASR)
-  const THRESHOLD_DB= -28; // ← boost only if mean volume is below this level
-  //     -28 dB = genuinely quiet recording that needs help
-  //     -24 dB = boost more aggressively
-  //     -20 dB = boost almost everything
+  // TUNE THESE VALUES:
+  const TARGET_DB    = -14; // target loudness in dBFS
+  const THRESHOLD_DB = -28; // boost only if recording is quieter than this
+  //   -28 = boost genuinely quiet recordings
+  //   -24 = boost more aggressively
+  //   -20 = boost almost everything
   // ════════════════════════════════════════════════════════════════════
 
-  // Run analysis + optional boost, then hand off to finalise2()
+  setStat('p'); // show Processing… immediately
   autoNormalise(rawBlob, TARGET_DB, THRESHOLD_DB, mime);
 }
 
 async function autoNormalise(rawBlob, targetDb, thresholdDb, mime){
   try{
-    // Decode the blob to PCM samples so we can measure loudness
-    const arrayBuf = await rawBlob.arrayBuffer();
-    const offlineCtx = new OfflineAudioContext(1, 1, 44100); // just for decoding
-    const decoded = await new AudioContext().decodeAudioData(arrayBuf);
-    const samples  = decoded.getChannelData(0);
+    // Decode to PCM samples
+    const arrayBuf  = await rawBlob.arrayBuffer();
+    const audioCtx  = new AudioContext();
+    const decoded   = await audioCtx.decodeAudioData(arrayBuf);
+    audioCtx.close();
 
-    // Measure mean dBFS (same as ffmpeg volumedetect mean_volume)
+    // Downmix to mono if stereo (average all channels)
+    let samples;
+    if(decoded.numberOfChannels > 1){
+      const len = decoded.length;
+      samples   = new Float32Array(len);
+      for(let ch=0; ch<decoded.numberOfChannels; ch++){
+        const chData = decoded.getChannelData(ch);
+        for(let i=0; i<len; i++) samples[i] += chData[i];
+      }
+      const inv = 1.0 / decoded.numberOfChannels;
+      for(let i=0; i<samples.length; i++) samples[i] *= inv;
+    } else {
+      samples = decoded.getChannelData(0);
+    }
+
+    // Measure RMS → mean dBFS (mirrors ffmpeg volumedetect mean_volume)
     let sumSq = 0;
     for(let i=0; i<samples.length; i++) sumSq += samples[i]*samples[i];
     const rms    = Math.sqrt(sumSq / samples.length);
     const meanDb = rms > 0 ? 20*Math.log10(rms) : -100;
-
     console.log(`[Alsidian] Mean volume: ${meanDb.toFixed(1)} dB | Threshold: ${thresholdDb} dB`);
 
     if(meanDb < thresholdDb){
-      // Volume is below threshold — calculate and apply boost
-      const gainDb    = targetDb - meanDb;           // how many dB to add
-      const gainLinear= Math.pow(10, gainDb/20);     // convert dB to linear multiplier
+      // Calculate gain needed to reach target, capped to avoid clipping
+      const gainDb     = targetDb - meanDb;
+      const gainLinear = Math.min(Math.pow(10, gainDb/20), 10.0);
+      console.log(`[Alsidian] Boosting ${gainDb.toFixed(1)} dB (${gainLinear.toFixed(2)}x)`);
 
-      // Cap linear gain to avoid catastrophic clipping on near-silent files
-      const safeGain  = Math.min(gainLinear, 12.0);  // max 12x linear = +21.6 dB
-
-      console.log(`[Alsidian] Boosting by ${gainDb.toFixed(1)} dB (${safeGain.toFixed(2)}x linear)`);
-
-      // Re-render the audio with the boost applied
-      const sampleRate = decoded.sampleRate;
-      const length     = decoded.length;
-      // OfflineAudioContext(channels, length, sampleRate)
-      // channels=1 ensures mono output — prevents stereo artefacts on re-encode
-      const ctx2       = new OfflineAudioContext(1, length, sampleRate);
-      const srcNode    = ctx2.createBufferSource();
-      // If decoded is stereo, merge to mono before boosting
-      if(decoded.numberOfChannels > 1){
-        const merger = ctx2.createChannelMerger(1);
-        // Average left+right into single mono channel
-        const splitter = ctx2.createChannelSplitter(decoded.numberOfChannels);
-        srcNode.connect(splitter);
-        for(let ch=0; ch<decoded.numberOfChannels; ch++){
-          splitter.connect(merger, ch, 0);
-        }
-        const gainNode = ctx2.createGain();
-        gainNode.gain.value = safeGain / decoded.numberOfChannels;
-        merger.connect(gainNode);
-        gainNode.connect(ctx2.destination);
-      } else {
-        const gainNode   = ctx2.createGain();
-        gainNode.gain.value = safeGain;
-        srcNode.connect(gainNode);
-        gainNode.connect(ctx2.destination);
+      // Scale PCM samples directly — no re-encoding, no artefacts
+      const boosted = new Float32Array(samples.length);
+      let   peak    = 0;
+      for(let i=0; i<samples.length; i++){
+        boosted[i] = samples[i] * gainLinear;
+        if(Math.abs(boosted[i]) > peak) peak = Math.abs(boosted[i]);
       }
-      srcNode.start(0);
-      const boosted    = await ctx2.startRendering();
+      // If scaling caused any clipping, normalise back down
+      if(peak > 0.99){
+        const safeScale = 0.99 / peak;
+        for(let i=0; i<boosted.length; i++) boosted[i] *= safeScale;
+        console.log(`[Alsidian] Anti-clip rescale applied (${safeScale.toFixed(3)})`);
+      }
 
-      // Encode back to WebM/Opus via MediaRecorder on a silent canvas stream
-      // (Only way to re-encode in-browser without a WASM codec)
-      // If re-encoding fails we fall back to the raw blob silently
+      // Encode the boosted PCM once to WebM/Opus — clean single encode
       try{
-        const finalBlob = await encodeAudioBuffer(boosted, mime);
-        console.log(`[Alsidian] Normalised blob: ${(finalBlob.size/1024).toFixed(1)} KB`);
+        const finalBlob = await pcmToBlob(boosted, decoded.sampleRate, mime);
+        console.log(`[Alsidian] Normalised: ${(finalBlob.size/1024).toFixed(1)} KB`);
         finalise2(finalBlob);
         return;
       }catch(encErr){
-        console.warn('[Alsidian] Re-encode failed, using raw blob:', encErr);
+        console.warn('[Alsidian] Encode failed, using raw blob:', encErr);
       }
     } else {
       console.log(`[Alsidian] Volume OK (${meanDb.toFixed(1)} dB) — no boost needed`);
     }
   }catch(err){
-    console.warn('[Alsidian] Auto-normalise failed, using raw blob:', err);
+    console.warn('[Alsidian] Normalise failed, using raw blob:', err);
   }
-  // Fallback: use raw blob as-is
   finalise2(rawBlob);
 }
 
-// Re-encodes an AudioBuffer back to the browser's native audio format
-function encodeAudioBuffer(audioBuffer, preferredMime){
+// Encode a Float32Array of mono PCM samples to a compressed audio Blob.
+// Uses a single AudioBufferSourceNode → MediaStreamDestination → MediaRecorder.
+// Output is always mono (1 channel) — no stereo artefacts possible.
+function pcmToBlob(samples, sampleRate, preferredMime){
   return new Promise((resolve, reject)=>{
-    // Re-encode AudioBuffer back to compressed audio.
-    // CRITICAL: force mono throughout — if any node defaults to stereo,
-    // phase cancellation between the two identical channels creates a
-    // shrill metallic hum in the output file.
-    const ctx       = new AudioContext({sampleRate: audioBuffer.sampleRate});
-    const src       = ctx.createBufferSource();
-    src.buffer      = audioBuffer;
-    const dest      = ctx.createMediaStreamDestination();
+    const ctx    = new AudioContext({sampleRate});
+    // Build an AudioBuffer from the PCM samples (mono, 1 channel)
+    const buf    = ctx.createBuffer(1, samples.length, sampleRate);
+    buf.copyToChannel(samples, 0);
 
-    // Force mono on the destination node
+    // Destination stream — force mono
+    const dest   = ctx.createMediaStreamDestination();
     try{ dest.channelCount=1; dest.channelCountMode='explicit'; }catch(e){}
 
-    // Downmix to mono: if audio has >1 channel, average all channels into one
-    if(audioBuffer.numberOfChannels > 1){
-      const splitter  = ctx.createChannelSplitter(audioBuffer.numberOfChannels);
-      const merger    = ctx.createChannelMerger(1);
-      src.connect(splitter);
-      for(let ch=0; ch<audioBuffer.numberOfChannels; ch++){
-        splitter.connect(merger, ch, 0);
-      }
-      merger.connect(dest);
-    } else {
-      src.connect(dest);
-    }
+    const src    = ctx.createBufferSource();
+    src.buffer   = buf;
+    src.connect(dest);
 
-    const mime2     = MediaRecorder.isTypeSupported(preferredMime)
-                      ? preferredMime
-                      : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '');
-    const mr        = new MediaRecorder(dest.stream, mime2?{mimeType:mime2}:{});
-    const chunks    = [];
-    mr.ondataavailable = e=>{ if(e.data.size>0) chunks.push(e.data); };
+    const mime2  = MediaRecorder.isTypeSupported(preferredMime) ? preferredMime
+                 : MediaRecorder.isTypeSupported('audio/webm')  ? 'audio/webm' : '';
+    const mr     = new MediaRecorder(dest.stream, mime2?{mimeType:mime2}:{});
+    const chunks = [];
+    mr.ondataavailable = e=>{ if(e.data&&e.data.size>0) chunks.push(e.data); };
     mr.onstop = ()=>{
       ctx.close();
       if(chunks.length===0){ reject(new Error('no chunks')); return; }
       resolve(new Blob(chunks, {type: mime2||'audio/webm'}));
     };
-    mr.onerror = (e)=>{ ctx.close(); reject(e); };
+    mr.onerror = e=>{ ctx.close(); reject(e); };
     mr.start();
     src.start(0);
-    // Stop recorder slightly after the buffer duration ends
-    setTimeout(()=>{ try{mr.stop();}catch(e){} }, (audioBuffer.duration*1000)+200);
+    // Stop slightly after buffer ends to capture all audio
+    setTimeout(()=>{ try{mr.stop();}catch(e){} }, (samples.length/sampleRate*1000)+300);
   });
 }
 
