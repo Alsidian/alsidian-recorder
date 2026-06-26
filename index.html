@@ -472,7 +472,7 @@ function finalise(){
   // ════════════════════════════════════════════════════════════════════
   // TUNE THESE TWO VALUES to match your ffmpeg script:
   const TARGET_DB   = -14; // ← target loudness in dBFS (industry standard for ASR)
-  const THRESHOLD_DB= -24; // ← boost only if mean volume is below this level
+  const THRESHOLD_DB= -28; // ← boost only if mean volume is below this level
   //     -28 dB = genuinely quiet recording that needs help
   //     -24 dB = boost more aggressively
   //     -20 dB = boost almost everything
