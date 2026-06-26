@@ -361,11 +361,15 @@ async function startRec(){
     ST.actx=new(window.AudioContext||window.webkitAudioContext)();
     const src=ST.actx.createMediaStreamSource(stream);
 
-    // GAIN BOOST: amplifies quiet voices 2.5x before recording.
-    // Safe for phone mics at normal speaking distance. No clipping risk.
-    // Adjust value: 1.5=subtle 2.5=recommended 3.5=strong
+    // ════════════════════════════════════════════════════════════
+    // GAIN BOOST — adjust this number to change recording volume
+    //   1.5 = subtle boost (good mics / close speakers)
+    //   2.5 = recommended (most phone mics, normal distance)
+    //   3.5 = strong boost (quiet speakers / far from mic)
+    //   4.0 = maximum (use carefully — may distort loud voices)
+    // ════════════════════════════════════════════════════════════
     const gain=ST.actx.createGain();
-    gain.gain.value=2.5;
+    gain.gain.value=2.5; // ← CHANGE THIS NUMBER to adjust volume
     const dest=ST.actx.createMediaStreamDestination();
     src.connect(gain);
     gain.connect(dest);
@@ -393,16 +397,131 @@ function finalise(){
   const dur=ST.tSec;
   if(dur<CFG.MIN){showT(`⚠ Too short (${dur}s) — speak at least 2s`,'err');discRec();return;}
   const mime=ST.chunks[0]?.type||'audio/webm';
-  ST.blob=new Blob(ST.chunks,{type:mime});
-  if(ST.url)URL.revokeObjectURL(ST.url);
-  ST.url=URL.createObjectURL(ST.blob);
-  ST.aud=new Audio();ST.aud.src=ST.url;ST.aud.preload='auto';ST.aud.load();
+  const rawBlob=new Blob(ST.chunks,{type:mime});
+
+  // ── AUTO VOLUME NORMALISATION ──────────────────────────────────────
+  // Mirrors the ffmpeg shell script logic but runs entirely in the browser.
+  // Step 1: decode the raw recording and measure its mean dB level.
+  // Step 2: if mean dB is below THRESHOLD, apply a gain boost to reach TARGET.
+  // Step 3: re-encode to a new Blob and use that for playback + upload.
+  //
+  // ════════════════════════════════════════════════════════════════════
+  // TUNE THESE TWO VALUES to match your ffmpeg script:
+  const TARGET_DB   = -14; // ← target loudness in dBFS (industry standard for ASR)
+  const THRESHOLD_DB= -28; // ← boost only if mean volume is below this level
+  //     -28 dB = genuinely quiet recording that needs help
+  //     -24 dB = boost more aggressively
+  //     -20 dB = boost almost everything
+  // ════════════════════════════════════════════════════════════════════
+
+  // Run analysis + optional boost, then hand off to finalise2()
+  autoNormalise(rawBlob, TARGET_DB, THRESHOLD_DB, mime);
+}
+
+async function autoNormalise(rawBlob, targetDb, thresholdDb, mime){
+  try{
+    // Decode the blob to PCM samples so we can measure loudness
+    const arrayBuf = await rawBlob.arrayBuffer();
+    const offlineCtx = new OfflineAudioContext(1, 1, 44100); // just for decoding
+    const decoded = await new AudioContext().decodeAudioData(arrayBuf);
+    const samples  = decoded.getChannelData(0);
+
+    // Measure mean dBFS (same as ffmpeg volumedetect mean_volume)
+    let sumSq = 0;
+    for(let i=0; i<samples.length; i++) sumSq += samples[i]*samples[i];
+    const rms    = Math.sqrt(sumSq / samples.length);
+    const meanDb = rms > 0 ? 20*Math.log10(rms) : -100;
+
+    console.log(`[Alsidian] Mean volume: ${meanDb.toFixed(1)} dB | Threshold: ${thresholdDb} dB`);
+
+    if(meanDb < thresholdDb){
+      // Volume is below threshold — calculate and apply boost
+      const gainDb    = targetDb - meanDb;           // how many dB to add
+      const gainLinear= Math.pow(10, gainDb/20);     // convert dB to linear multiplier
+
+      // Cap linear gain to avoid catastrophic clipping on near-silent files
+      const safeGain  = Math.min(gainLinear, 12.0);  // max 12x linear = +21.6 dB
+
+      console.log(`[Alsidian] Boosting by ${gainDb.toFixed(1)} dB (${safeGain.toFixed(2)}x linear)`);
+
+      // Re-render the audio with the boost applied
+      const sampleRate = decoded.sampleRate;
+      const length     = decoded.length;
+      const ctx2       = new OfflineAudioContext(1, length, sampleRate);
+      const srcNode    = ctx2.createBufferSource();
+      srcNode.buffer   = decoded;
+      const gainNode   = ctx2.createGain();
+      gainNode.gain.value = safeGain;
+      srcNode.connect(gainNode);
+      gainNode.connect(ctx2.destination);
+      srcNode.start(0);
+      const boosted    = await ctx2.startRendering();
+
+      // Encode back to WebM/Opus via MediaRecorder on a silent canvas stream
+      // (Only way to re-encode in-browser without a WASM codec)
+      // If re-encoding fails we fall back to the raw blob silently
+      try{
+        const finalBlob = await encodeAudioBuffer(boosted, mime);
+        console.log(`[Alsidian] Normalised blob: ${(finalBlob.size/1024).toFixed(1)} KB`);
+        finalise2(finalBlob);
+        return;
+      }catch(encErr){
+        console.warn('[Alsidian] Re-encode failed, using raw blob:', encErr);
+      }
+    } else {
+      console.log(`[Alsidian] Volume OK (${meanDb.toFixed(1)} dB) — no boost needed`);
+    }
+  }catch(err){
+    console.warn('[Alsidian] Auto-normalise failed, using raw blob:', err);
+  }
+  // Fallback: use raw blob as-is
+  finalise2(rawBlob);
+}
+
+// Re-encodes an AudioBuffer back to the browser's native audio format
+function encodeAudioBuffer(audioBuffer, preferredMime){
+  return new Promise((resolve, reject)=>{
+    // Create a short MediaStream from the AudioBuffer using Web Audio
+    const ctx       = new AudioContext({sampleRate: audioBuffer.sampleRate});
+    const src       = ctx.createBufferSource();
+    src.buffer      = audioBuffer;
+    const dest      = ctx.createMediaStreamDestination();
+    src.connect(dest);
+
+    const mime2     = MediaRecorder.isTypeSupported(preferredMime)
+                      ? preferredMime
+                      : (MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '');
+    const mr        = new MediaRecorder(dest.stream, mime2?{mimeType:mime2}:{});
+    const chunks    = [];
+    mr.ondataavailable = e=>{ if(e.data.size>0) chunks.push(e.data); };
+    mr.onstop = ()=>{
+      ctx.close();
+      if(chunks.length===0){ reject(new Error('no chunks')); return; }
+      resolve(new Blob(chunks, {type: mime2||'audio/webm'}));
+    };
+    mr.onerror = (e)=>{ ctx.close(); reject(e); };
+    mr.start();
+    src.start(0);
+    // Stop recorder slightly after the buffer duration ends
+    setTimeout(()=>{ try{mr.stop();}catch(e){} }, (audioBuffer.duration*1000)+200);
+  });
+}
+
+function finalise2(blob){
+  if(ST.url) URL.revokeObjectURL(ST.url);
+  ST.blob = blob;
+  ST.url  = URL.createObjectURL(blob);
+  ST.aud  = new Audio();
+  ST.aud.src     = ST.url;
+  ST.aud.preload = 'auto';
+  ST.aud.load();
   setStat('d');
-  document.getElementById('bplay').disabled=false;
-  document.getElementById('btrash').disabled=false;
-  document.getElementById('bsub').disabled=false;
-  document.getElementById('brec').disabled=true;
-  drawFWv();showT(`✓ Take ${getTake()+1} ready — preview or submit`,'ok');
+  document.getElementById('bplay').disabled  = false;
+  document.getElementById('btrash').disabled = false;
+  document.getElementById('bsub').disabled   = false;
+  document.getElementById('brec').disabled   = true;
+  drawFWv();
+  showT(`✓ Take ${getTake()+1} ready — preview or submit`,'ok');
 }
 function playBk(){if(!ST.aud)return;ST.aud.currentTime=0;const p=ST.aud.play();if(p&&p.catch)p.catch(()=>showT('Tap ▶ again to play',''));}
 function discRec(){
