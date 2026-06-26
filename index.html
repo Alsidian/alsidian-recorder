@@ -379,13 +379,25 @@ async function startRec(){
     const gain=ST.actx.createGain();
     gain.gain.value=2.5; // ← CHANGE THIS NUMBER to adjust volume
     const dest=ST.actx.createMediaStreamDestination();
-    src.connect(gain);
-    gain.connect(dest);
 
-    // Waveform analyser taps off gain so display reflects boosted level
+    // ── HIGHPASS FILTER ──────────────────────────────────────────────
+    // Cuts frequencies below 80Hz — removes electrical/power supply hum
+    // (100Hz AC harmonic common in India) without affecting voice quality.
+    // Human voice starts at ~80Hz so this is completely safe.
+    // Increase frequency to 120Hz if hum persists; lower to 60Hz if voice sounds thin.
+    const hpf=ST.actx.createBiquadFilter();
+    hpf.type='highpass';
+    hpf.frequency.value=80;  // ← CHANGE THIS to tune hum removal (60-120Hz)
+    hpf.Q.value=0.7;          // gentle rolloff — avoids resonance artefacts
+
+    src.connect(gain);
+    gain.connect(hpf);
+    hpf.connect(dest);
+
+    // Waveform analyser taps off highpass filter so display reflects filtered signal
     ST.analyser=ST.actx.createAnalyser();
     ST.analyser.fftSize=256;
-    gain.connect(ST.analyser);
+    hpf.connect(ST.analyser);
     drawWv();
 
     // Record the boosted stream (dest.stream), not the raw mic stream
@@ -471,11 +483,11 @@ function finalise(){
   //
   // ════════════════════════════════════════════════════════════════════
   // TUNE THESE VALUES:
-  const TARGET_DB    = -14; // target loudness in dBFS
-  const THRESHOLD_DB = -28; // boost only if recording is quieter than this
-  //   -28 = boost genuinely quiet recordings
-  //   -24 = boost more aggressively
-  //   -20 = boost almost everything
+  const TARGET_DB    = -18; // target loudness in dBFS (was -14, lowered to reduce hum)
+  const THRESHOLD_DB = -32; // boost only if recording is quieter than this (was -28)
+  //   TARGET_DB:    lower number = less aggressive boost = less hum risk
+  //   THRESHOLD_DB: lower number = fewer files get boosted at all
+  //   Current setting boosts only genuinely very quiet files, gently
   // ════════════════════════════════════════════════════════════════════
 
   setStat('p'); // show Processing… immediately
@@ -515,7 +527,7 @@ async function autoNormalise(rawBlob, targetDb, thresholdDb, mime){
     if(meanDb < thresholdDb){
       // Calculate gain needed to reach target, capped to avoid clipping
       const gainDb     = targetDb - meanDb;
-      const gainLinear = Math.min(Math.pow(10, gainDb/20), 10.0);
+      const gainLinear = Math.min(Math.pow(10, gainDb/20), 4.0);  // cap at 4x (+12dB) to prevent noise amplification
       console.log(`[Alsidian] Boosting ${gainDb.toFixed(1)} dB (${gainLinear.toFixed(2)}x)`);
 
       // Scale PCM samples directly — no re-encoding, no artefacts
