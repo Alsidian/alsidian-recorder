@@ -96,7 +96,75 @@ canvas{width:100%;height:52px;display:block}
 .ty-st{display:flex;justify-content:center;gap:24px;margin-bottom:20px}
 .ty-sn{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--blue)}
 .ty-sl{font-size:11px;color:var(--slate);font-weight:600;text-transform:uppercase;letter-spacing:.8px}
+
+/* ═══════════════════════════════════════
+   INTRO MODAL
+═══════════════════════════════════════ */
+.mo-overlay{position:fixed;inset:0;background:rgba(8,18,32,.78);backdrop-filter:blur(5px);z-index:200;display:flex;align-items:center;justify-content:center;padding:12px;}
+.mo-overlay.hidden{display:none;}
+.mo-box{background:#fff;border-radius:20px;width:100%;max-width:500px;overflow:hidden;box-shadow:0 28px 70px rgba(8,18,32,.3);animation:moUp .35s cubic-bezier(.16,1,.3,1);}
+@keyframes moUp{from{transform:translateY(36px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* header band */
+.mo-head{background:var(--navy);padding:18px 22px 14px;color:#fff;}
+.mo-eyebrow{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;opacity:.6;margin-bottom:3px;font-weight:600;}
+.mo-title{font-size:1.05rem;font-weight:700;line-height:1.3;}
+.mo-sub{font-size:.78rem;opacity:.65;margin-top:3px;}
+
+/* step pills */
+.mo-steps{display:flex;gap:5px;margin-top:12px;}
+.mo-step{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,.22);transition:background .35s;}
+.mo-step.done{background:rgba(255,255,255,.55);}
+.mo-step.active{background:#fff;}
+
+/* progress bar */
+.mo-progbar{height:3px;background:rgba(26,92,184,.12);}
+.mo-progfill{height:100%;background:linear-gradient(90deg,var(--blue),var(--sky));width:0%;transition:width .3s;}
+
+/* slide track */
+.mo-slides{overflow:hidden;}
+.mo-track{display:flex;transition:transform .4s cubic-bezier(.16,1,.3,1);}
+.mo-slide{min-width:100%;padding:22px 22px 18px;display:flex;flex-direction:column;gap:0;}
+
+/* slide icon badge */
+.mo-icon{width:56px;height:56px;border-radius:14px;font-size:1.7rem;display:flex;align-items:center;justify-content:center;margin-bottom:12px;flex-shrink:0;}
+.ic-do{background:#E6F7EE;}.ic-dont{background:#FEE8E8;}.ic-tip{background:#EBF4FF;}.ic-time{background:#FFF3E0;}
+
+/* slide tag */
+.mo-tag{font-size:.62rem;font-weight:700;letter-spacing:.9px;text-transform:uppercase;margin-bottom:4px;}
+.tag-do{color:#1B8A52;}.tag-dont{color:#C62828;}.tag-tip{color:var(--blue);}.tag-time{color:#B45309;}
+
+/* slide heading */
+.mo-h{font-size:.95rem;font-weight:700;color:var(--navy);margin-bottom:12px;}
+
+/* tip rows */
+.mo-tips{display:flex;flex-direction:column;gap:8px;}
+.mo-tip{display:flex;align-items:flex-start;gap:10px;font-size:.84rem;line-height:1.5;color:var(--ink);}
+.mo-bullet{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;margin-top:1px;}
+.b-ok{background:#E6F7EE;color:#1B8A52;}.b-no{background:#FEE8E8;color:#C62828;}.b-num{background:var(--ice);color:var(--blue);}
+.mo-tip strong{font-weight:600;}
+
+/* timing diagram */
+.timing-blk{background:#F0F5FC;border-radius:10px;padding:13px 14px;margin-top:10px;display:flex;flex-direction:column;gap:6px;}
+.t-row{display:flex;align-items:center;gap:8px;}
+.t-lbl{font-size:.68rem;font-weight:700;color:var(--slate);width:58px;flex-shrink:0;text-align:right;}
+.t-bar{flex:1;border-radius:5px;padding:5px 10px;font-size:.72rem;font-weight:600;color:#fff;display:flex;align-items:center;gap:5px;min-height:28px;}
+.tb-tap{background:var(--blue);}.tb-wait{background:#CBD5E0;color:#4A5568;}.tb-speak{background:#1B8A52;}.tb-stop{background:var(--red);}
+
+/* footer */
+.mo-foot{padding:13px 22px 18px;border-top:1px solid #E8EEF5;display:flex;align-items:center;gap:10px;}
+.mo-dontshow{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--slate);cursor:pointer;user-select:none;white-space:nowrap;}
+.mo-dontshow input{width:auto;accent-color:var(--blue);}
+.mo-skip{background:none;border:none;font-size:.78rem;color:var(--slate);cursor:pointer;font-family:Inter,sans-serif;text-decoration:underline;text-underline-offset:2px;padding:4px;white-space:nowrap;}
+.mo-next{margin-left:auto;padding:10px 20px;background:linear-gradient(135deg,var(--blue),var(--sky));color:#fff;border:none;border-radius:10px;font-size:.88rem;font-weight:700;font-family:Inter,sans-serif;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:opacity .15s;}
+.mo-next:hover{opacity:.88;}
+.mo-next.last{background:linear-gradient(135deg,#0B6E47,var(--mint));}
+
+/* tip bar inside main */
+.tip-reopen{display:flex;align-items:center;gap:7px;background:#FFF8EC;border:1.5px solid #F5D98A;border-radius:8px;padding:9px 13px;font-size:.78rem;color:#7A5800;font-weight:600;margin-top:12px;cursor:pointer;transition:background .15s;}
+.tip-reopen:hover{background:#FFF3D0;}
 </style>
+<!-- STYLE TAG CLOSED ABOVE — removing old closing tag below -->
 </head>
 <body>
 <header class="header">
@@ -144,6 +212,10 @@ canvas{width:100%;height:52px;display:block}
 <div class="ci" onclick="togCheck(this)"><div class="cb"></div>I have read the sentence shown before pressing Record</div>
 </div>
 <div class="cl-warn" id="clwarn">⚠ Please tick all 4 boxes above before you can record.</div>
+<div class="tip-reopen" onclick="moOpen()">
+  <svg width="15" height="15" viewBox="0 0 15 15" fill="none"><circle cx="7.5" cy="7.5" r="6.5" stroke="#B45309" stroke-width="1.3"/><path d="M7.5 6.5v4M7.5 4.5h.01" stroke="#B45309" stroke-width="1.4" stroke-linecap="round"/></svg>
+  View recording tips &amp; instructions again
+</div>
 </div>
 
 <div class="card">
@@ -202,6 +274,197 @@ Questions? WhatsApp us · <a href="https://www.alsidian.com" style="color:var(--
 </div>
 </main>
 <div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════
+     INTRO MODAL
+════════════════════════════════════════════════ -->
+<div class="mo-overlay" id="moOverlay">
+  <div class="mo-box">
+
+    <div class="mo-head">
+      <div class="mo-eyebrow">Before you start</div>
+      <div class="mo-title">Recording Instructions</div>
+      <div class="mo-sub">Read each tip carefully — it takes 1 minute</div>
+      <div class="mo-steps" id="moSteps"></div>
+    </div>
+
+    <div class="mo-progbar"><div class="mo-progfill" id="moProgFill"></div></div>
+
+    <div class="mo-slides">
+      <div class="mo-track" id="moTrack">
+
+        <!-- ── SLIDE 1: Environment ── -->
+        <div class="mo-slide">
+          <div class="mo-icon ic-do">🔇</div>
+          <div class="mo-tag tag-do">✓ Environment</div>
+          <div class="mo-h">Record in a quiet place</div>
+          <div class="mo-tips">
+            <div class="mo-tip"><span class="mo-bullet b-ok">✓</span><span>Find a quiet room — close the door, and turn off fans, AC, and the TV</span></div>
+            <div class="mo-tip"><span class="mo-bullet b-ok">✓</span><span>If using a laptop, sit in a quiet room and speak clearly toward the microphone</span></div>
+            <div class="mo-tip"><span class="mo-bullet b-no">✗</span><span>Never record in a moving car, café, or anywhere with background noise or echo</span></div>
+            <div class="mo-tip"><span class="mo-bullet b-no">✗</span><span>A recording will be rejected if we detect loud background noise, fan/AC hum, TV, traffic, or other voices</span></div>
+          </div>
+        </div>
+
+        <!-- ── SLIDE 2: Device ── -->
+        <div class="mo-slide">
+          <div class="mo-icon ic-tip">📱</div>
+          <div class="mo-tag tag-tip">✓ Your Device</div>
+          <div class="mo-h">Set up your device correctly</div>
+          <div class="mo-tips">
+            <div class="mo-tip"><span class="mo-bullet b-ok">✓</span><span>Hold your phone <strong>10–15 cm from your mouth</strong> — not too close, not too far. Do not cover the microphone with your fingers</span></div>
+            <div class="mo-tip"><span class="mo-bullet b-ok">✓</span><span><strong>Put your phone in Airplane Mode</strong> before starting — a notification or call during recording will ruin the file</span></div>
+            <div class="mo-tip"><span class="mo-bullet b-ok">✓</span><span>Earphones with a built-in mic (the ones that came with your phone) work perfectly fine</span></div>
+            <div class="mo-tip"><span class="mo-bullet b-no">✗</span><span>A recording will be rejected if a phone notification sound or vibration is heard in it</span></div>
+          </div>
+        </div>
+
+        <!-- ── SLIDE 3: How to speak ── -->
+        <div class="mo-slide">
+          <div class="mo-icon ic-do">🗣️</div>
+          <div class="mo-tag tag-do">✓ How to Speak</div>
+          <div class="mo-h">Sound natural, not read-aloud</div>
+          <div class="mo-tips">
+            <div class="mo-tip"><span class="mo-bullet b-ok">✓</span><span><strong>Read the sentence silently first.</strong> Understand it fully. Then record — speak it as if saying it naturally in conversation, not reading it aloud</span></div>
+            <div class="mo-tip"><span class="mo-bullet b-ok">✓</span><span>Speak at your <strong>normal everyday pace</strong> — the way you talk to a friend. Not slowly, not dramatically</span></div>
+            <div class="mo-tip"><span class="mo-bullet b-ok">✓</span><span>Complete the whole sentence <strong>in one go</strong> — no pauses mid-sentence. Speak it fluently from start to finish</span></div>
+            <div class="mo-tip"><span class="mo-bullet b-no">✗</span><span>Do not whisper, shout, or put extra stress on any word — speak the whole sentence evenly and naturally</span></div>
+          </div>
+        </div>
+
+        <!-- ── SLIDE 4: What to avoid ── -->
+        <div class="mo-slide">
+          <div class="mo-icon ic-dont">⚠️</div>
+          <div class="mo-tag tag-dont">✗ What Gets Rejected</div>
+          <div class="mo-h">Avoid these — recordings will be rejected</div>
+          <div class="mo-tips">
+            <div class="mo-tip"><span class="mo-bullet b-no">✗</span><span>Stumbling, correcting yourself, or repeating a word — if this happens, press the <strong>trash icon 🗑</strong> and re-record</span></div>
+            <div class="mo-tip"><span class="mo-bullet b-no">✗</span><span>Reading too fast or too slowly, or skipping / changing words in the sentence</span></div>
+            <div class="mo-tip"><span class="mo-bullet b-no">✗</span><span>Echo or hollow sound (e.g. recording in a bathroom or empty hall)</span></div>
+            <div class="mo-tip"><span class="mo-bullet b-no">✗</span><span>Recordings under <strong>2 seconds</strong> long will be automatically rejected</span></div>
+          </div>
+        </div>
+
+        <!-- ── SLIDE 5: Timing ── -->
+        <div class="mo-slide">
+          <div class="mo-icon ic-time">⏱️</div>
+          <div class="mo-tag tag-time">⚙ Start &amp; Stop Timing</div>
+          <div class="mo-h">These two habits make a big difference</div>
+          <div class="mo-tips" style="gap:10px;">
+            <div class="mo-tip">
+              <span class="mo-bullet b-num">1</span>
+              <span>After pressing <strong>Start Recording</strong> — take one natural breath, <em>then</em> begin speaking. This short gap ensures your <strong>first word</strong> is fully captured.</span>
+            </div>
+            <div class="mo-tip">
+              <span class="mo-bullet b-num">2</span>
+              <span>After finishing the last word — pause naturally for <strong>one second</strong>, <em>then</em> press <strong>Stop Recording</strong>. This ensures your <strong>last word</strong> is not cut off.</span>
+            </div>
+          </div>
+          <div class="timing-blk">
+            <div class="t-row"><div class="t-lbl">Press</div><div class="t-bar tb-tap">▶ Start Recording</div></div>
+            <div class="t-row"><div class="t-lbl">1 breath</div><div class="t-bar tb-wait" style="color:#4A5568;">… short pause</div></div>
+            <div class="t-row"><div class="t-lbl">Speak</div><div class="t-bar tb-speak">🗣 Read sentence aloud — fluently</div></div>
+            <div class="t-row"><div class="t-lbl">1 second</div><div class="t-bar tb-wait" style="color:#4A5568;">… short pause</div></div>
+            <div class="t-row"><div class="t-lbl">Press</div><div class="t-bar tb-stop">■ Stop Recording</div></div>
+          </div>
+        </div>
+
+      </div><!-- /mo-track -->
+    </div><!-- /mo-slides -->
+
+    <div class="mo-foot">
+      <label class="mo-dontshow"><input type="checkbox" id="moDontShow"> Don't show again</label>
+      <button class="mo-skip" id="moSkip" onclick="moClose()">Skip</button>
+      <button class="mo-next" id="moNext" onclick="moNext()">Next →</button>
+    </div>
+
+  </div><!-- /mo-box -->
+</div><!-- /mo-overlay -->
+
+<script>
+/* ─── INTRO MODAL ─────────────────────────────── */
+(function(){
+  const TOTAL = 5;
+  let cur = 0;
+
+  function buildSteps(){
+    const el = document.getElementById('moSteps');
+    for(let i=0;i<TOTAL;i++){
+      const d = document.createElement('div');
+      d.className = 'mo-step';
+      el.appendChild(d);
+    }
+  }
+
+  function updateUI(){
+    // steps
+    document.querySelectorAll('.mo-step').forEach((d,i)=>{
+      d.className = 'mo-step' + (i===cur?' active':i<cur?' done':'');
+    });
+    // progress fill
+    document.getElementById('moProgFill').style.width = ((cur+1)/TOTAL*100)+'%';
+    // next button
+    const btn = document.getElementById('moNext');
+    if(cur === TOTAL-1){
+      btn.textContent = '✓ Got it, let\'s record!';
+      btn.className = 'mo-next last';
+    } else {
+      btn.innerHTML = 'Next →';
+      btn.className = 'mo-next';
+    }
+  }
+
+  function goTo(n){
+    cur = n;
+    document.getElementById('moTrack').style.transform = 'translateX(-'+(cur*100)+'%)';
+    updateUI();
+  }
+
+  window.moNext = function(){
+    if(cur < TOTAL-1){ goTo(cur+1); }
+    else { moClose(); }
+  };
+
+  window.moClose = function(){
+    document.getElementById('moOverlay').classList.add('hidden');
+    if(document.getElementById('moDontShow').checked){
+      try{ localStorage.setItem('als_skip_intro','1'); } catch(e){}
+    }
+  };
+
+  window.moOpen = function(){
+    cur = 0;
+    document.getElementById('moOverlay').classList.remove('hidden');
+    document.getElementById('moTrack').style.transform = 'translateX(0)';
+    document.getElementById('moDontShow').checked = false;
+    updateUI();
+  };
+
+  // swipe support
+  let tx = 0;
+  const track = document.getElementById('moTrack');
+  track.addEventListener('touchstart', e=>{ tx = e.touches[0].clientX; },{passive:true});
+  track.addEventListener('touchend', e=>{
+    const dx = tx - e.changedTouches[0].clientX;
+    if(Math.abs(dx)>40){
+      if(dx>0 && cur<TOTAL-1) goTo(cur+1);
+      if(dx<0 && cur>0) goTo(cur-1);
+    }
+  },{passive:true});
+
+  // init
+  buildSteps();
+  updateUI();
+
+  window.addEventListener('DOMContentLoaded', ()=>{
+    let skip = false;
+    try{ skip = localStorage.getItem('als_skip_intro')==='1'; }catch(e){}
+    if(!skip) moOpen();
+  });
+})();
+/* ─────────────────────────────────────────────── */
+</script>
+
 <script>
 
 const CFG={
@@ -379,25 +642,13 @@ async function startRec(){
     const gain=ST.actx.createGain();
     gain.gain.value=2.5; // ← CHANGE THIS NUMBER to adjust volume
     const dest=ST.actx.createMediaStreamDestination();
-
-    // ── HIGHPASS FILTER ──────────────────────────────────────────────
-    // Cuts frequencies below 80Hz — removes electrical/power supply hum
-    // (100Hz AC harmonic common in India) without affecting voice quality.
-    // Human voice starts at ~80Hz so this is completely safe.
-    // Increase frequency to 120Hz if hum persists; lower to 60Hz if voice sounds thin.
-    const hpf=ST.actx.createBiquadFilter();
-    hpf.type='highpass';
-    hpf.frequency.value=80;  // ← CHANGE THIS to tune hum removal (60-120Hz)
-    hpf.Q.value=0.7;          // gentle rolloff — avoids resonance artefacts
-
     src.connect(gain);
-    gain.connect(hpf);
-    hpf.connect(dest);
+    gain.connect(dest);
 
-    // Waveform analyser taps off highpass filter so display reflects filtered signal
+    // Waveform analyser taps off gain so display reflects boosted level
     ST.analyser=ST.actx.createAnalyser();
     ST.analyser.fftSize=256;
-    hpf.connect(ST.analyser);
+    gain.connect(ST.analyser);
     drawWv();
 
     // Record the boosted stream (dest.stream), not the raw mic stream
@@ -483,11 +734,11 @@ function finalise(){
   //
   // ════════════════════════════════════════════════════════════════════
   // TUNE THESE VALUES:
-  const TARGET_DB    = -18; // target loudness in dBFS (was -14, lowered to reduce hum)
-  const THRESHOLD_DB = -32; // boost only if recording is quieter than this (was -28)
-  //   TARGET_DB:    lower number = less aggressive boost = less hum risk
-  //   THRESHOLD_DB: lower number = fewer files get boosted at all
-  //   Current setting boosts only genuinely very quiet files, gently
+  const TARGET_DB    = -14; // target loudness in dBFS
+  const THRESHOLD_DB = -28; // boost only if recording is quieter than this
+  //   -28 = boost genuinely quiet recordings
+  //   -24 = boost more aggressively
+  //   -20 = boost almost everything
   // ════════════════════════════════════════════════════════════════════
 
   setStat('p'); // show Processing… immediately
@@ -527,7 +778,7 @@ async function autoNormalise(rawBlob, targetDb, thresholdDb, mime){
     if(meanDb < thresholdDb){
       // Calculate gain needed to reach target, capped to avoid clipping
       const gainDb     = targetDb - meanDb;
-      const gainLinear = Math.min(Math.pow(10, gainDb/20), 4.0);  // cap at 4x (+12dB) to prevent noise amplification
+      const gainLinear = Math.min(Math.pow(10, gainDb/20), 10.0);
       console.log(`[Alsidian] Boosting ${gainDb.toFixed(1)} dB (${gainLinear.toFixed(2)}x)`);
 
       // Scale PCM samples directly — no re-encoding, no artefacts
