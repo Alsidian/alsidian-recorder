@@ -163,9 +163,7 @@ canvas{width:100%;height:52px;display:block}
 /* tip bar inside main */
 .tip-reopen{display:flex;align-items:center;gap:7px;background:#FFF8EC;border:1.5px solid #F5D98A;border-radius:8px;padding:9px 13px;font-size:.78rem;color:#7A5800;font-weight:600;margin-top:12px;cursor:pointer;transition:background .15s;}
 .tip-reopen:hover{background:#FFF3D0;}
-/* ── PRE-RECORDING ARMED STATE ── */
-.brec.arming{background:#E8A020!important;cursor:not-allowed!important;animation:armPulse .55s ease-in-out infinite;}
-@keyframes armPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.75;transform:scale(.98);}}
+/* ── PRE-RECORDING ARMED STATE — removed, using post-trim instead ── */
 </style>
 <!-- STYLE TAG CLOSED ABOVE — removing old closing tag below -->
 </head>
@@ -623,11 +621,6 @@ async function togRec(){
 }
 async function startRec(){
   try{
-    // ── SAFE AUDIO CONSTRAINTS ────────────────────────────────────────
-    // Do NOT set echoCancellation/noiseSuppression/autoGainControl all
-    // to false simultaneously — iOS Safari and Android Chrome abort the
-    // stream silently after 2-3 seconds when all three are disabled.
-    // channelCount:1 (mono) and sampleRate:16000 are safe and sufficient.
     const stream=await navigator.mediaDevices.getUserMedia({
       audio:{channelCount:1, sampleRate:16000}
     });
@@ -643,52 +636,85 @@ async function startRec(){
     //   4.0 = maximum (use carefully — may distort loud voices)
     // ════════════════════════════════════════════════════════════
     const gain=ST.actx.createGain();
-    gain.gain.value=2.5; // ← CHANGE THIS NUMBER to adjust volume
+    gain.gain.value=2.5;
     const dest=ST.actx.createMediaStreamDestination();
     src.connect(gain);
     gain.connect(dest);
 
-    // Waveform analyser taps off gain so display reflects boosted level
     ST.analyser=ST.actx.createAnalyser();
     ST.analyser.fftSize=256;
     gain.connect(ST.analyser);
+    drawWv();
 
-    // Record the boosted stream (dest.stream), not the raw mic stream
     const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg']
       .find(m=>MediaRecorder.isTypeSupported(m))||'';
     ST.mr=new MediaRecorder(dest.stream, mime?{mimeType:mime}:{});
     ST.chunks=[];
+
+    // ── PRE-BUFFER (rolling ring buffer via ScriptProcessor) ─────────
+    // A ScriptProcessorNode silently captures the last 800ms of raw PCM
+    // from the mic continuously BEFORE the speaker even taps Record.
+    // When onstop fires, this pre-tap audio is prepended to the recording
+    // in autoNormalise — so even if the speaker speaks the instant they
+    // tap, we already have audio from before the button press.
+    // This is the only reliable fix for first-word clipping on mobile.
+    const SR=ST.actx.sampleRate;
+    const PREBUF_SEC=0.8;
+    const PREBUF_LEN=Math.ceil(SR*PREBUF_SEC);
+    const ringBuf=new Float32Array(PREBUF_LEN);
+    let ringPos=0, ringFull=false;
+
+    const spn=ST.actx.createScriptProcessor(4096,1,1);
+    gain.connect(spn);
+    spn.connect(ST.actx.destination); // must connect to keep node alive
+    spn.onaudioprocess=(e)=>{
+      const inp=e.inputBuffer.getChannelData(0);
+      for(let i=0;i<inp.length;i++){
+        ringBuf[ringPos]=inp[i];
+        ringPos=(ringPos+1)%PREBUF_LEN;
+        if(ringPos===0) ringFull=true;
+      }
+    };
+    ST._spn=spn;
+
     ST.mr.ondataavailable=e=>{if(e.data&&e.data.size>0)ST.chunks.push(e.data);};
 
-    // ── GUARD AGAINST UNEXPECTED EARLY STOP ──────────────────────────
-    // onstop fires both on normal stop AND if browser aborts the stream.
-    // wasUnexpected=true means the browser stopped it, not the speaker.
     ST.mr.onstop=()=>{
-      const wasUnexpected = ST.isRec; // ST.isRec still true = we didn't call stopRec()
-      ST.isRec = false;
+      const wasUnexpected=ST.isRec;
+      ST.isRec=false;
       stopTim();
       cancelAnimationFrame(ST.animId);
-      if(ST.actx){ST.actx.close(); ST.actx=null;}
+      if(ST._spn){try{ST._spn.disconnect();}catch(x){} ST._spn=null;}
+      if(ST.actx){ST.actx.close();ST.actx=null;}
       stream.getTracks().forEach(t=>t.stop());
       ST.rawStream=null;
-      if(wasUnexpected && ST.tSec < CFG.MIN){
-        // Aborted too early — warn speaker and reset cleanly
+      if(wasUnexpected&&ST.tSec<CFG.MIN){
         setStat('i');
         showT('⚠ Recording stopped early — please tap Record again','err');
-        discRec();
-        return;
+        discRec();return;
       }
-      setStat('p'); // show Processing… while normaliser runs
+      setStat('p');
+      // Snapshot the ring buffer in chronological order and pass to finalise
+      const snapLen=ringFull?PREBUF_LEN:ringPos;
+      const prePCM=new Float32Array(snapLen);
+      if(ringFull){
+        prePCM.set(ringBuf.subarray(ringPos),0);
+        prePCM.set(ringBuf.subarray(0,ringPos),PREBUF_LEN-ringPos);
+      } else {
+        prePCM.set(ringBuf.subarray(0,ringPos),0);
+      }
+      ST._prePCM=prePCM;
+      ST._preSR=SR;
       finalise();
     };
 
-    // onerror — catches any MediaRecorder internal failure
     ST.mr.onerror=(e)=>{
       console.error('[Alsidian] MediaRecorder error:',e);
       ST.isRec=false;
       stopTim();
       cancelAnimationFrame(ST.animId);
-      if(ST.actx){ST.actx.close(); ST.actx=null;}
+      if(ST._spn){try{ST._spn.disconnect();}catch(x){} ST._spn=null;}
+      if(ST.actx){ST.actx.close();ST.actx=null;}
       stream.getTracks().forEach(t=>t.stop());
       ST.rawStream=null;
       setStat('i');
@@ -696,30 +722,11 @@ async function startRec(){
       discRec();
     };
 
-    // ── PRE-ROLL (400ms) ──────────────────────────────────────────────
-    // Start MediaRecorder immediately so mic hardware is fully warm.
-    // Wait 400ms, discard those chunks, THEN switch to active recording.
-    // Speaker sees button flash briefly to red — first word never clipped.
-    ST.mr.start(100); // 100ms timeslice during pre-roll for fine discard
-    ST.rawStream=stream;
-    drawWv();
-
-    // Show a brief "armed" flash on the button before going live
-    setStat('a');
-    document.getElementById('rlbl').textContent='Starting…';
-    document.getElementById('stxt2').textContent='Get ready…';
-
-    await new Promise(r=>setTimeout(r,400));
-
-    // Discard pre-roll chunks — mic-warmup audio, not wanted
-    ST.chunks=[];
-
-    // NOW go live — speaker can speak immediately
+    ST.mr.start(250);
     ST.isRec=true;
     setStat('r');
     startTim();
-
-    // Hard stop at MAX duration
+    ST.rawStream=stream;
     ST.maxTimer=setTimeout(()=>{if(ST.isRec)stopRec();},CFG.MAX*1000);
 
   }catch(e){
@@ -763,68 +770,113 @@ function finalise(){
 
 async function autoNormalise(rawBlob, targetDb, thresholdDb, mime){
   try{
-    // Decode to PCM samples
+    // Decode MediaRecorder chunks to PCM
     const arrayBuf  = await rawBlob.arrayBuffer();
     const audioCtx  = new AudioContext();
     const decoded   = await audioCtx.decodeAudioData(arrayBuf);
     audioCtx.close();
 
-    // Downmix to mono if stereo (average all channels)
-    let samples;
+    // Downmix to mono
+    let recSamples;
     if(decoded.numberOfChannels > 1){
       const len = decoded.length;
-      samples   = new Float32Array(len);
-      for(let ch=0; ch<decoded.numberOfChannels; ch++){
-        const chData = decoded.getChannelData(ch);
-        for(let i=0; i<len; i++) samples[i] += chData[i];
+      recSamples = new Float32Array(len);
+      for(let ch=0;ch<decoded.numberOfChannels;ch++){
+        const chData=decoded.getChannelData(ch);
+        for(let i=0;i<len;i++) recSamples[i]+=chData[i];
       }
-      const inv = 1.0 / decoded.numberOfChannels;
-      for(let i=0; i<samples.length; i++) samples[i] *= inv;
+      const inv=1.0/decoded.numberOfChannels;
+      for(let i=0;i<recSamples.length;i++) recSamples[i]*=inv;
     } else {
-      samples = decoded.getChannelData(0);
+      recSamples=decoded.getChannelData(0);
     }
 
-    // Measure RMS → mean dBFS (mirrors ffmpeg volumedetect mean_volume)
-    let sumSq = 0;
-    for(let i=0; i<samples.length; i++) sumSq += samples[i]*samples[i];
-    const rms    = Math.sqrt(sumSq / samples.length);
-    const meanDb = rms > 0 ? 20*Math.log10(rms) : -100;
+    // ── PREPEND PRE-BUFFER ────────────────────────────────────────────
+    // ST._prePCM holds raw PCM captured before the speaker tapped Record.
+    // Prepend the last 300ms of it (trim earlier silence to avoid bloat).
+    // This guarantees the first phoneme is captured even if spoken instantly.
+    let samples=recSamples;
+    if(ST._prePCM&&ST._prePCM.length>0){
+      const preSR=ST._preSR||decoded.sampleRate;
+      // Resample pre-buffer if sample rates differ (rare but safe)
+      let pre=ST._prePCM;
+      if(preSR!==decoded.sampleRate){
+        const ratio=decoded.sampleRate/preSR;
+        const resampled=new Float32Array(Math.round(pre.length*ratio));
+        for(let i=0;i<resampled.length;i++) resampled[i]=pre[Math.round(i/ratio)]||0;
+        pre=resampled;
+      }
+      // Keep only the last 300ms of pre-buffer (enough lead-in, not too much silence)
+      const keepSamples=Math.min(pre.length,Math.ceil(decoded.sampleRate*0.3));
+      const preTrim=pre.subarray(pre.length-keepSamples);
+      const merged=new Float32Array(preTrim.length+recSamples.length);
+      merged.set(preTrim,0);
+      merged.set(recSamples,preTrim.length);
+      samples=merged;
+      console.log(`[Alsidian] Pre-buffer prepended: ${(preTrim.length/decoded.sampleRate*1000).toFixed(0)}ms`);
+    }
+    ST._prePCM=null; // free memory
+
+    // ── TRIM LEADING SILENCE ─────────────────────────────────────────
+    // Find the first sample above noise floor (0.01 ≈ -40dBFS).
+    // Back up 80ms before that point so the onset attack is preserved.
+    // Then prepend exactly 80ms of clean silence as natural lead-in.
+    const NOISE_FLOOR=0.01;
+    const ONSET_BACKUP=Math.ceil(decoded.sampleRate*0.08); // 80ms backup
+    const LEAD_IN=Math.ceil(decoded.sampleRate*0.08);      // 80ms silence prefix
+    let speechStart=0;
+    for(let i=0;i<samples.length;i++){
+      if(Math.abs(samples[i])>NOISE_FLOOR){ speechStart=i; break; }
+    }
+    const trimFrom=Math.max(0,speechStart-ONSET_BACKUP);
+    const trimmed=samples.subarray(trimFrom);
+    const leadIn=new Float32Array(LEAD_IN); // zeros = silence
+    const final=new Float32Array(LEAD_IN+trimmed.length);
+    final.set(leadIn,0);
+    final.set(trimmed,LEAD_IN);
+    samples=final;
+    console.log(`[Alsidian] Trimmed ${(trimFrom/decoded.sampleRate*1000).toFixed(0)}ms leading silence`);
+
+    // ── VOLUME NORMALISE ──────────────────────────────────────────────
+    let sumSq=0;
+    for(let i=0;i<samples.length;i++) sumSq+=samples[i]*samples[i];
+    const rms=Math.sqrt(sumSq/samples.length);
+    const meanDb=rms>0?20*Math.log10(rms):-100;
     console.log(`[Alsidian] Mean volume: ${meanDb.toFixed(1)} dB | Threshold: ${thresholdDb} dB`);
 
-    if(meanDb < thresholdDb){
-      // Calculate gain needed to reach target, capped to avoid clipping
-      const gainDb     = targetDb - meanDb;
-      const gainLinear = Math.min(Math.pow(10, gainDb/20), 10.0);
+    if(meanDb<thresholdDb){
+      const gainDb=targetDb-meanDb;
+      const gainLinear=Math.min(Math.pow(10,gainDb/20),10.0);
       console.log(`[Alsidian] Boosting ${gainDb.toFixed(1)} dB (${gainLinear.toFixed(2)}x)`);
-
-      // Scale PCM samples directly — no re-encoding, no artefacts
-      const boosted = new Float32Array(samples.length);
-      let   peak    = 0;
-      for(let i=0; i<samples.length; i++){
-        boosted[i] = samples[i] * gainLinear;
-        if(Math.abs(boosted[i]) > peak) peak = Math.abs(boosted[i]);
+      const boosted=new Float32Array(samples.length);
+      let peak=0;
+      for(let i=0;i<samples.length;i++){
+        boosted[i]=samples[i]*gainLinear;
+        if(Math.abs(boosted[i])>peak) peak=Math.abs(boosted[i]);
       }
-      // If scaling caused any clipping, normalise back down
-      if(peak > 0.99){
-        const safeScale = 0.99 / peak;
-        for(let i=0; i<boosted.length; i++) boosted[i] *= safeScale;
+      if(peak>0.99){
+        const safeScale=0.99/peak;
+        for(let i=0;i<boosted.length;i++) boosted[i]*=safeScale;
         console.log(`[Alsidian] Anti-clip rescale applied (${safeScale.toFixed(3)})`);
       }
-
-      // Encode the boosted PCM once to WebM/Opus — clean single encode
       try{
-        const finalBlob = await pcmToBlob(boosted, decoded.sampleRate, mime);
+        const finalBlob=await pcmToBlob(boosted,decoded.sampleRate,mime);
         console.log(`[Alsidian] Normalised: ${(finalBlob.size/1024).toFixed(1)} KB`);
-        finalise2(finalBlob);
-        return;
+        finalise2(finalBlob);return;
       }catch(encErr){
-        console.warn('[Alsidian] Encode failed, using raw blob:', encErr);
+        console.warn('[Alsidian] Encode failed, using trimmed blob:', encErr);
       }
     } else {
-      console.log(`[Alsidian] Volume OK (${meanDb.toFixed(1)} dB) — no boost needed`);
+      console.log(`[Alsidian] Volume OK (${meanDb.toFixed(1)} dB) — encoding trimmed audio`);
     }
+    // Even if no boost needed, encode the trimmed+prebuffered version
+    try{
+      const trimBlob=await pcmToBlob(samples,decoded.sampleRate,mime);
+      finalise2(trimBlob);return;
+    }catch(e){}
   }catch(err){
     console.warn('[Alsidian] Normalise failed, using raw blob:', err);
+    ST._prePCM=null;
   }
   finalise2(rawBlob);
 }
@@ -966,11 +1018,6 @@ function setStat(s){
     btn.className='brec idle';btn.disabled=false;
     document.getElementById('ricon').textContent='⏺';
     document.getElementById('rlbl').textContent='Start Recording';
-  }else if(s==='a'){
-    // ARMING — countdown before mic opens
-    bar.className='sbar si0';dot.className='sd d0';
-    btn.className='brec arming';btn.disabled=true;
-    document.getElementById('ricon').textContent='⏱';
   }else if(s==='r'){
     bar.className='sbar si1';dot.className='sd d1';
     txt.textContent='Recording… speak now';
