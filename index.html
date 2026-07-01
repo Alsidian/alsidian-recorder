@@ -650,51 +650,9 @@ async function startRec(){
       .find(m=>MediaRecorder.isTypeSupported(m))||'';
     ST.mr=new MediaRecorder(dest.stream, mime?{mimeType:mime}:{});
     ST.chunks=[];
+    ST._prePCM=null; // no pre-buffer; first-word fix is handled in autoNormalise
 
-    // ── PRE-BUFFER (rolling ring buffer via ScriptProcessor) ─────────
-    // Silently captures a rolling 800ms of raw PCM while the speaker
-    // reads the sentence — BEFORE they tap Record.
-    // We snapshot and freeze the buffer the instant Record is tapped,
-    // then disconnect the ScriptProcessor so it stops capturing.
-    // The snapshot is prepended in autoNormalise to cover any mic
-    // ramp-up latency on the first word.
-    const SR=ST.actx.sampleRate;
-    const PREBUF_SEC=0.8;
-    const PREBUF_LEN=Math.ceil(SR*PREBUF_SEC);
-    const ringBuf=new Float32Array(PREBUF_LEN);
-    let ringPos=0, ringFull=false;
-
-    const spn=ST.actx.createScriptProcessor(4096,1,1);
-    gain.connect(spn);
-    spn.connect(ST.actx.destination); // must stay connected to fire events
-    spn.onaudioprocess=(e)=>{
-      const inp=e.inputBuffer.getChannelData(0);
-      for(let i=0;i<inp.length;i++){
-        ringBuf[ringPos]=inp[i];
-        ringPos=(ringPos+1)%PREBUF_LEN;
-        if(ringPos===0) ringFull=true;
-      }
-    };
-
-    // ── SNAPSHOT NOW, before MediaRecorder starts ─────────────────────
-    // This is the critical fix: freeze the ring buffer at tap-time,
-    // not at stop-time. Disconnecting stops further writes immediately.
-    await new Promise(r=>setTimeout(r,0)); // flush any pending onaudioprocess
-    try{spn.disconnect();}catch(x){}       // stop the ring buffer filling
-
-    // Unwrap ring buffer into chronological order
-    const snapLen=ringFull?PREBUF_LEN:ringPos;
-    const prePCM=new Float32Array(snapLen);
-    if(ringFull){
-      const tail=PREBUF_LEN-ringPos;
-      prePCM.set(ringBuf.subarray(ringPos),0);
-      prePCM.set(ringBuf.subarray(0,ringPos),tail);
-    } else {
-      prePCM.set(ringBuf.subarray(0,ringPos),0);
-    }
-    ST._prePCM=prePCM;
-    ST._preSR=SR;
-    ST._spn=null; // already disconnected, nothing to clean up later
+    ST.mr.ondataavailable=e=>{if(e.data&&e.data.size>0)ST.chunks.push(e.data);};
 
     ST.mr.ondataavailable=e=>{if(e.data&&e.data.size>0)ST.chunks.push(e.data);};
 
@@ -703,7 +661,6 @@ async function startRec(){
       ST.isRec=false;
       stopTim();
       cancelAnimationFrame(ST.animId);
-      if(ST._spn){try{ST._spn.disconnect();}catch(x){} ST._spn=null;}
       if(ST.actx){ST.actx.close();ST.actx=null;}
       stream.getTracks().forEach(t=>t.stop());
       ST.rawStream=null;
@@ -713,7 +670,6 @@ async function startRec(){
         discRec();return;
       }
       setStat('p');
-      // ST._prePCM already snapshotted at tap-time — just call finalise
       finalise();
     };
 
@@ -722,7 +678,6 @@ async function startRec(){
       ST.isRec=false;
       stopTim();
       cancelAnimationFrame(ST.animId);
-      if(ST._spn){try{ST._spn.disconnect();}catch(x){} ST._spn=null;}
       if(ST.actx){ST.actx.close();ST.actx=null;}
       stream.getTracks().forEach(t=>t.stop());
       ST.rawStream=null;
@@ -799,34 +754,16 @@ async function autoNormalise(rawBlob, targetDb, thresholdDb, mime){
       recSamples = new Float32Array(decoded.getChannelData(0)); // copy
     }
 
-    // ── PREPEND PRE-BUFFER ────────────────────────────────────────────
-    // ST._prePCM = raw PCM captured silently before the speaker tapped.
-    // Prepend the last 300ms of it so the first phoneme is never clipped.
-    let samples = recSamples;
-    if(ST._prePCM && ST._prePCM.length > 0){
-      const preSR = ST._preSR || decoded.sampleRate;
-      let pre = ST._prePCM;
-      if(preSR !== decoded.sampleRate){
-        const ratio = decoded.sampleRate / preSR;
-        const rs = new Float32Array(Math.round(pre.length * ratio));
-        for(let i=0;i<rs.length;i++) rs[i] = pre[Math.round(i/ratio)]||0;
-        pre = rs;
-      }
-      const keepSamples = Math.min(pre.length, Math.ceil(decoded.sampleRate * 0.3));
-      const preTrim = pre.subarray(pre.length - keepSamples);
-      const merged = new Float32Array(preTrim.length + recSamples.length);
-      merged.set(preTrim, 0);
-      merged.set(recSamples, preTrim.length);
-      samples = merged;
-      console.log(`[Alsidian] Pre-buffer prepended: ${(preTrim.length/decoded.sampleRate*1000).toFixed(0)}ms`);
-    }
-    ST._prePCM = null;
-
     // ── TRIM LEADING SILENCE ──────────────────────────────────────────
-    // Scan for first sample above -40dBFS, back up 80ms to keep attack.
+    // MediaRecorder has hardware ramp-up latency — the first ~100-300ms
+    // of audio may be clipped or silent. We scan for where speech actually
+    // begins (first sample above -40dBFS noise floor), back up 100ms to
+    // preserve the onset attack, then prepend 200ms of clean silence as
+    // a natural lead-in. This reliably captures the full first word.
+    let samples=recSamples;
     const NOISE_FLOOR  = 0.01;
-    const ONSET_BACKUP = Math.ceil(decoded.sampleRate * 0.08);
-    const LEAD_IN_LEN  = Math.ceil(decoded.sampleRate * 0.08);
+    const ONSET_BACKUP = Math.ceil(decoded.sampleRate * 0.10); // 100ms backup
+    const LEAD_IN_LEN  = Math.ceil(decoded.sampleRate * 0.20); // 200ms silence lead-in
     let speechStart = 0;
     for(let i=0;i<samples.length;i++){
       if(Math.abs(samples[i]) > NOISE_FLOOR){ speechStart = i; break; }
@@ -834,10 +771,9 @@ async function autoNormalise(rawBlob, targetDb, thresholdDb, mime){
     const trimFrom = Math.max(0, speechStart - ONSET_BACKUP);
     const trimmed  = samples.subarray(trimFrom);
     const final    = new Float32Array(LEAD_IN_LEN + trimmed.length);
-    // first LEAD_IN_LEN samples stay zero (silence)
-    final.set(trimmed, LEAD_IN_LEN);
+    final.set(trimmed, LEAD_IN_LEN); // first LEAD_IN_LEN samples stay zero = silence
     samples = final;
-    console.log(`[Alsidian] Trimmed ${(trimFrom/decoded.sampleRate*1000).toFixed(0)}ms leading silence`);
+    console.log(`[Alsidian] Trimmed ${(trimFrom/decoded.sampleRate*1000).toFixed(0)}ms, speech onset at ${(speechStart/decoded.sampleRate*1000).toFixed(0)}ms`);
 
     // ── VOLUME CHECK ──────────────────────────────────────────────────
     let sumSq = 0;
