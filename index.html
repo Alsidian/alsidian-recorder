@@ -163,6 +163,9 @@ canvas{width:100%;height:52px;display:block}
 /* tip bar inside main */
 .tip-reopen{display:flex;align-items:center;gap:7px;background:#FFF8EC;border:1.5px solid #F5D98A;border-radius:8px;padding:9px 13px;font-size:.78rem;color:#7A5800;font-weight:600;margin-top:12px;cursor:pointer;transition:background .15s;}
 .tip-reopen:hover{background:#FFF3D0;}
+/* ── PRE-RECORDING ARMED STATE ── */
+.brec.arming{background:#E8A020!important;cursor:not-allowed!important;animation:armPulse .55s ease-in-out infinite;}
+@keyframes armPulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.75;transform:scale(.98);}}
 </style>
 <!-- STYLE TAG CLOSED ABOVE — removing old closing tag below -->
 </head>
@@ -649,7 +652,6 @@ async function startRec(){
     ST.analyser=ST.actx.createAnalyser();
     ST.analyser.fftSize=256;
     gain.connect(ST.analyser);
-    drawWv();
 
     // Record the boosted stream (dest.stream), not the raw mic stream
     const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg']
@@ -694,14 +696,28 @@ async function startRec(){
       discRec();
     };
 
-    // 250ms timeslice — more stable on mobile than 100ms
-    ST.mr.start(250);
+    // ── PRE-ROLL (400ms) ──────────────────────────────────────────────
+    // Start MediaRecorder immediately so mic hardware is fully warm.
+    // Wait 400ms, discard those chunks, THEN switch to active recording.
+    // Speaker sees button flash briefly to red — first word never clipped.
+    ST.mr.start(100); // 100ms timeslice during pre-roll for fine discard
+    ST.rawStream=stream;
+    drawWv();
+
+    // Show a brief "armed" flash on the button before going live
+    setStat('a');
+    document.getElementById('rlbl').textContent='Starting…';
+    document.getElementById('stxt2').textContent='Get ready…';
+
+    await new Promise(r=>setTimeout(r,400));
+
+    // Discard pre-roll chunks — mic-warmup audio, not wanted
+    ST.chunks=[];
+
+    // NOW go live — speaker can speak immediately
     ST.isRec=true;
     setStat('r');
     startTim();
-
-    // Store raw stream ref for stopRec cleanup
-    ST.rawStream=stream;
 
     // Hard stop at MAX duration
     ST.maxTimer=setTimeout(()=>{if(ST.isRec)stopRec();},CFG.MAX*1000);
@@ -950,6 +966,11 @@ function setStat(s){
     btn.className='brec idle';btn.disabled=false;
     document.getElementById('ricon').textContent='⏺';
     document.getElementById('rlbl').textContent='Start Recording';
+  }else if(s==='a'){
+    // ARMING — countdown before mic opens
+    bar.className='sbar si0';dot.className='sd d0';
+    btn.className='brec arming';btn.disabled=true;
+    document.getElementById('ricon').textContent='⏱';
   }else if(s==='r'){
     bar.className='sbar si1';dot.className='sd d1';
     txt.textContent='Recording… speak now';
