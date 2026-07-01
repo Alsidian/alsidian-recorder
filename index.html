@@ -652,12 +652,12 @@ async function startRec(){
     ST.chunks=[];
 
     // ── PRE-BUFFER (rolling ring buffer via ScriptProcessor) ─────────
-    // A ScriptProcessorNode silently captures the last 800ms of raw PCM
-    // from the mic continuously BEFORE the speaker even taps Record.
-    // When onstop fires, this pre-tap audio is prepended to the recording
-    // in autoNormalise — so even if the speaker speaks the instant they
-    // tap, we already have audio from before the button press.
-    // This is the only reliable fix for first-word clipping on mobile.
+    // Silently captures a rolling 800ms of raw PCM while the speaker
+    // reads the sentence — BEFORE they tap Record.
+    // We snapshot and freeze the buffer the instant Record is tapped,
+    // then disconnect the ScriptProcessor so it stops capturing.
+    // The snapshot is prepended in autoNormalise to cover any mic
+    // ramp-up latency on the first word.
     const SR=ST.actx.sampleRate;
     const PREBUF_SEC=0.8;
     const PREBUF_LEN=Math.ceil(SR*PREBUF_SEC);
@@ -666,7 +666,7 @@ async function startRec(){
 
     const spn=ST.actx.createScriptProcessor(4096,1,1);
     gain.connect(spn);
-    spn.connect(ST.actx.destination); // must connect to keep node alive
+    spn.connect(ST.actx.destination); // must stay connected to fire events
     spn.onaudioprocess=(e)=>{
       const inp=e.inputBuffer.getChannelData(0);
       for(let i=0;i<inp.length;i++){
@@ -675,7 +675,26 @@ async function startRec(){
         if(ringPos===0) ringFull=true;
       }
     };
-    ST._spn=spn;
+
+    // ── SNAPSHOT NOW, before MediaRecorder starts ─────────────────────
+    // This is the critical fix: freeze the ring buffer at tap-time,
+    // not at stop-time. Disconnecting stops further writes immediately.
+    await new Promise(r=>setTimeout(r,0)); // flush any pending onaudioprocess
+    try{spn.disconnect();}catch(x){}       // stop the ring buffer filling
+
+    // Unwrap ring buffer into chronological order
+    const snapLen=ringFull?PREBUF_LEN:ringPos;
+    const prePCM=new Float32Array(snapLen);
+    if(ringFull){
+      const tail=PREBUF_LEN-ringPos;
+      prePCM.set(ringBuf.subarray(ringPos),0);
+      prePCM.set(ringBuf.subarray(0,ringPos),tail);
+    } else {
+      prePCM.set(ringBuf.subarray(0,ringPos),0);
+    }
+    ST._prePCM=prePCM;
+    ST._preSR=SR;
+    ST._spn=null; // already disconnected, nothing to clean up later
 
     ST.mr.ondataavailable=e=>{if(e.data&&e.data.size>0)ST.chunks.push(e.data);};
 
@@ -694,17 +713,7 @@ async function startRec(){
         discRec();return;
       }
       setStat('p');
-      // Snapshot the ring buffer in chronological order and pass to finalise
-      const snapLen=ringFull?PREBUF_LEN:ringPos;
-      const prePCM=new Float32Array(snapLen);
-      if(ringFull){
-        prePCM.set(ringBuf.subarray(ringPos),0);
-        prePCM.set(ringBuf.subarray(0,ringPos),PREBUF_LEN-ringPos);
-      } else {
-        prePCM.set(ringBuf.subarray(0,ringPos),0);
-      }
-      ST._prePCM=prePCM;
-      ST._preSR=SR;
+      // ST._prePCM already snapshotted at tap-time — just call finalise
       finalise();
     };
 
